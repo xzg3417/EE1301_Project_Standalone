@@ -1,269 +1,186 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Photon 2 Wi-Fi Radar Controller v2</title>
-    <!-- 使用 Tailwind CSS 进行快速美化 -->
+    <title>Photon 2 Wi-Fi Tactical Radar</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        body {
-            background-color: #0f172a;
-            color: #e2e8f0;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-        }
-
-        .panel {
-            background-color: #1e293b;
-            border-radius: 0.75rem;
+        body { background-color: #0b1121; color: #e2e8f0; font-family: 'Segoe UI', 'Roboto Mono', monospace; }
+        .panel { background-color: #151e32; border: 1px solid #2d3b55; border-radius: 4px; }
+        
+        /* 科技感按钮 */
+        .btn { 
+            background: linear-gradient(180deg, #1e293b 0%, #0f172a 100%);
             border: 1px solid #334155;
-            padding: 1.5rem;
+            transition: all 0.1s;
         }
+        .btn:hover { border-color: #38bdf8; color: #38bdf8; box-shadow: 0 0 10px rgba(56,189,248,0.2); }
+        .btn:active { transform: translateY(1px); }
+        
+        /* 列表项 */
+        .list-item { border-left: 2px solid transparent; }
+        .list-item:hover { background-color: #1e293b; border-left-color: #64748b; }
+        .list-item.active { background-color: #0c4a6e; border-left-color: #38bdf8; }
 
-        .btn {
-            cursor: pointer;
-            transition: all 0.2s;
-        }
+        /* 滚动条 */
+        .custom-scroll::-webkit-scrollbar { width: 6px; }
+        .custom-scroll::-webkit-scrollbar-track { background: #0b1121; }
+        .custom-scroll::-webkit-scrollbar-thumb { background: #334155; }
+        
+        /* 数据显示格 */
+        .data-box { background: #0f172a; border: 1px solid #1e293b; padding: 10px; }
+        .data-label { color: #64748b; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 2px; }
+        .data-value { color: #e2e8f0; font-family: 'Courier New', monospace; font-weight: bold; }
+        .highlight { color: #38bdf8; text-shadow: 0 0 5px rgba(56,189,248,0.4); }
 
-        .btn:hover {
-            filter: brightness(110%);
-            transform: translateY(-1px);
-        }
-
-        .btn:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-            filter: none;
-        }
-
-        .list-item:hover {
-            background-color: #334155;
-        }
-
-        /* 自定义滚动条 */
-        .custom-scroll::-webkit-scrollbar {
-            width: 8px;
-        }
-
-        .custom-scroll::-webkit-scrollbar-track {
-            background: #1e293b;
-        }
-
-        .custom-scroll::-webkit-scrollbar-thumb {
-            background: #475569;
-            border-radius: 4px;
-        }
-
-        .custom-scroll::-webkit-scrollbar-thumb:hover {
-            background: #64748b;
-        }
-
-        canvas {
-            width: 100%;
-            height: 300px;
-            border-radius: 0.5rem;
-            background: #000;
-            border: 1px solid #334155;
-        }
-
-        /* 日志区域样式 */
-        .log-entry {
-            font-family: 'Consolas', 'Monaco', monospace;
-            font-size: 0.8rem;
-            margin-bottom: 2px;
-        }
-
-        .log-info {
-            color: #38bdf8;
-        }
-
-        /* Sky Blue */
-        .log-warn {
-            color: #facc15;
-        }
-
-        /* Yellow */
-        .log-error {
-            color: #f87171;
-        }
-
-        /* Red */
-        .log-sys {
-            color: #94a3b8;
-        }
-
-        /* Slate (Debug) */
+        canvas { background: #000; border: 1px solid #334155; }
     </style>
 </head>
+<body class="p-4 h-screen flex flex-col overflow-hidden">
 
-<body class="p-6 max-w-6xl mx-auto">
-
-    <!-- 顶部标题栏 -->
-    <header class="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
-        <div>
-            <h1 class="text-3xl font-bold text-sky-400">Wi-Fi Signal Radar <span
-                    class="text-sm font-normal text-slate-500">v2.0</span></h1>
-            <p class="text-slate-400 text-sm">Phase 1: Manual Test Tool via Web Serial</p>
+    <!-- Header -->
+    <header class="flex justify-between items-center mb-4 shrink-0">
+        <div class="flex items-center gap-3">
+            <div class="w-3 h-3 bg-sky-500 rounded-full animate-pulse shadow-[0_0_10px_#0ea5e9]"></div>
+            <div>
+                <h1 class="text-2xl font-bold tracking-wider text-sky-500">WIFI_TACTICAL_RADAR</h1>
+                <p class="text-[10px] text-slate-500 tracking-[0.2em] uppercase">Photon 2 // RTL872x // Turbo Scan</p>
+            </div>
         </div>
-        <div class="flex gap-3 items-center">
-            <span id="statusBadge"
-                class="px-3 py-1 rounded-full text-xs font-bold bg-red-900 text-red-200 border border-red-700">DISCONNECTED</span>
-
-            <button id="simBtn"
-                class="btn bg-slate-700 hover:bg-slate-600 text-slate-200 px-4 py-2 rounded-lg font-semibold text-sm border border-slate-600">
-                🧪 Demo Mode
-            </button>
-
-            <button id="connectBtn"
-                class="btn bg-sky-600 hover:bg-sky-500 text-white px-6 py-2 rounded-lg font-semibold shadow-lg shadow-sky-900/50">
-                🔌 Connect Device
-            </button>
+        <div class="flex gap-2">
+            <button id="simBtn" class="btn px-4 py-1 text-xs text-slate-400">DEMO_SIM</button>
+            <button id="connectBtn" class="btn px-4 py-1 text-xs text-sky-400 font-bold border-sky-900">CONNECT_SERIAL</button>
         </div>
     </header>
 
-    <!-- 错误提示区 -->
-    <div id="errorBanner"
-        class="hidden mb-6 bg-amber-900/50 border border-amber-600 text-amber-100 p-4 rounded-lg flex items-start gap-3">
-        <span class="text-2xl">⚠️</span>
-        <div>
-            <h3 class="font-bold">Cannot Access Serial Port</h3>
-            <p class="text-sm opacity-90">浏览器预览环境禁止了串口访问。请点击右上角的 <strong>下载 (Download)</strong> 按钮保存此文件，然后在本地使用 Chrome
-                打开。</p>
+    <!-- Main Grid -->
+    <div class="flex-1 grid grid-cols-12 gap-4 overflow-hidden">
+        
+        <!-- Left: Network List -->
+        <div class="col-span-3 panel flex flex-col overflow-hidden">
+            <div class="p-3 border-b border-slate-800 flex justify-between items-center bg-slate-900/50">
+                <span class="text-xs font-bold text-slate-400">DETECTED SIGNALS</span>
+                <button id="scanBtn" class="text-xs text-sky-500 hover:text-white disabled:opacity-50">[ REFRESH ]</button>
+            </div>
+            <div id="networkList" class="flex-1 overflow-y-auto custom-scroll p-0">
+                <div class="p-4 text-center text-xs text-slate-600 font-mono">
+                    > SYSTEM IDLE<br>> WAITING FOR LINK
+                </div>
+            </div>
+        </div>
+
+        <!-- Right: Dashboard -->
+        <div class="col-span-9 flex flex-col gap-4 overflow-hidden">
+            
+            <!-- Top: Intel Grid -->
+            <div class="grid grid-cols-4 gap-4 h-24 shrink-0">
+                <div class="col-span-2 data-box flex flex-col justify-center relative overflow-hidden">
+                    <div class="absolute top-0 right-0 p-1 text-[10px] text-slate-700">TARGET_SSID</div>
+                    <div id="dispSSID" class="text-2xl text-white font-bold truncate">--</div>
+                    <div id="dispStatus" class="text-xs text-slate-500">NO TARGET LOCKED</div>
+                </div>
+                <div class="data-box flex flex-col justify-center">
+                    <div class="data-label">Signal Strength</div>
+                    <div class="flex items-baseline gap-2">
+                        <span id="dispRSSI" class="text-4xl highlight">--</span>
+                        <span class="text-xs text-slate-500">dBm</span>
+                    </div>
+                </div>
+                <div class="data-box flex flex-col justify-center">
+                    <div class="data-label">Update Rate</div>
+                    <div class="flex items-baseline gap-2">
+                        <span id="dispRate" class="text-2xl text-green-400">0</span>
+                        <span class="text-xs text-slate-500">Hz</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Middle: Technical Details -->
+            <div class="grid grid-cols-4 gap-4 shrink-0">
+                <div class="data-box">
+                    <div class="data-label">BSSID (MAC Address)</div>
+                    <div id="dispBSSID" class="data-value text-sky-300 text-sm">--:--:--:--:--:--</div>
+                </div>
+                <div class="data-box">
+                    <div class="data-label">Channel (Frequency)</div>
+                    <div id="dispChannel" class="data-value text-yellow-400">CH --</div>
+                </div>
+                <div class="data-box">
+                    <div class="data-label">Security Protocol</div>
+                    <div id="dispSec" class="data-value text-purple-400">--</div>
+                </div>
+                <div class="data-box relative">
+                    <div class="data-label">Signal Quality</div>
+                    <div class="w-full bg-slate-800 h-2 mt-2 rounded-full overflow-hidden">
+                        <div id="qualityBar" class="h-full bg-sky-500 w-0 transition-all duration-100"></div>
+                    </div>
+                    <div id="qualityText" class="absolute bottom-1 right-2 text-[10px] text-slate-400">0%</div>
+                </div>
+            </div>
+
+            <!-- Bottom: Real-time Chart -->
+            <div class="flex-1 panel relative flex flex-col">
+                <div class="absolute top-2 left-2 text-[10px] text-slate-500 z-10">RSSI HISTORY // T-MINUS 10s</div>
+                <canvas id="signalChart" class="flex-1 w-full h-full"></canvas>
+            </div>
+
+            <!-- Logger -->
+            <div class="h-32 panel bg-black font-mono text-xs overflow-y-auto custom-scroll p-2 text-slate-400" id="logConsole">
+                <div class="text-sky-600">> TERMINAL READY...</div>
+            </div>
         </div>
     </div>
 
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-
-        <!-- 左侧：扫描列表 -->
-        <div class="panel col-span-1 flex flex-col h-[600px]">
-            <div class="flex justify-between items-center mb-4">
-                <h2 class="text-xl font-semibold">Networks</h2>
-                <button id="scanBtn" class="btn bg-slate-600 hover:bg-slate-500 text-white px-3 py-1 rounded text-sm"
-                    disabled>
-                    🔄 Scan
-                </button>
-            </div>
-            <div class="overflow-y-auto flex-1 pr-1 custom-scroll" id="networkList">
-                <div class="text-center text-slate-500 mt-20">
-                    Click "Connect Device" to start.<br>Or try "Demo Mode".
-                </div>
-            </div>
-        </div>
-
-        <!-- 右侧：仪表盘和日志 -->
-        <div class="col-span-1 lg:col-span-2 flex flex-col gap-6">
-
-            <!-- 上半部分：仪表盘 -->
-            <div class="panel flex-1">
-                <div class="mb-4 flex justify-between items-end">
-                    <div>
-                        <h2 class="text-slate-400 text-sm uppercase tracking-wider">Tracking Target</h2>
-                        <div id="targetName" class="text-2xl font-bold text-white">None Selected</div>
-                    </div>
-                    <div class="text-right">
-                        <h2 class="text-slate-400 text-sm uppercase tracking-wider">Signal Strength (RSSI)</h2>
-                        <div id="rssiValue" class="text-5xl font-mono font-bold text-sky-400">- -- <span
-                                class="text-xl text-slate-500">dBm</span></div>
-                    </div>
-                </div>
-
-                <!-- 信号条 -->
-                <div class="w-full bg-slate-800 rounded-full h-4 mb-6 overflow-hidden border border-slate-700">
-                    <div id="rssiBar"
-                        class="bg-gradient-to-r from-red-500 via-yellow-400 to-green-500 h-full w-0 transition-all duration-300 ease-out">
-                    </div>
-                </div>
-
-                <!-- 画布：实时波形 -->
-                <canvas id="signalChart"></canvas>
-            </div>
-
-            <!-- 下半部分：日志控制台 -->
-            <div class="panel h-[200px] flex flex-col p-0 overflow-hidden bg-black border-slate-700">
-                <div
-                    class="bg-slate-800 px-4 py-2 text-xs font-bold text-slate-400 border-b border-slate-700 flex justify-between">
-                    <span>SYSTEM LOG / DEBUG CONSOLE</span>
-                    <button onclick="clearLog()" class="hover:text-white">Clear</button>
-                </div>
-                <div id="logConsole" class="flex-1 p-4 overflow-y-auto custom-scroll font-mono text-sm">
-                    <!-- Logs will appear here -->
-                    <div class="log-entry log-sys">> Ready. Waiting for connection...</div>
-                </div>
-            </div>
-
-        </div>
-    </div>
-
-    <!-- JavaScript 逻辑 -->
     <script>
-        let port;
-        let reader;
-        let writer;
+        // --- 系统变量 ---
+        let port, reader, writer;
         let isConnected = false;
         let isSimulating = false;
-        let simInterval;
-        let chartData = new Array(200).fill(-120);
+        let simInterval, chartInterval;
+        let chartData = new Array(300).fill(-120);
+        
+        // 性能监控
+        let lastPacketTime = 0;
+        let packetCount = 0;
+        let lastRateCheck = 0;
 
-        const connectBtn = document.getElementById('connectBtn');
-        const simBtn = document.getElementById('simBtn');
-        const scanBtn = document.getElementById('scanBtn');
-        const statusBadge = document.getElementById('statusBadge');
-        const networkList = document.getElementById('networkList');
-        const logConsole = document.getElementById('logConsole');
-        const errorBanner = document.getElementById('errorBanner');
-        const canvas = document.getElementById('signalChart');
-        const ctx = canvas.getContext('2d');
+        // 当前追踪信息
+        let currentTarget = { ssid: "", channel: 0 };
 
-        canvas.width = canvas.parentElement.offsetWidth;
-        canvas.height = 300;
-
-        window.addEventListener('resize', () => {
-            canvas.width = canvas.parentElement.offsetWidth;
-            drawChart();
-        });
-
-        // --- 日志功能 ---
-        function appendLog(level, msg) {
-            const div = document.createElement('div');
-            div.className = 'log-entry';
-
-            const timestamp = new Date().toLocaleTimeString().split(' ')[0];
-            let prefix = `[${timestamp}] `;
-
-            if (level === 'INFO') {
-                div.classList.add('log-info');
-                prefix += "ℹ️ ";
-            } else if (level === 'WARN') {
-                div.classList.add('log-warn');
-                prefix += "⚠️ ";
-            } else if (level === 'ERROR') {
-                div.classList.add('log-error');
-                prefix += "❌ ";
-            } else {
-                div.classList.add('log-sys');
-                prefix += "> ";
+        // --- DOM 元素 ---
+        const els = {
+            connect: document.getElementById('connectBtn'),
+            scan: document.getElementById('scanBtn'),
+            sim: document.getElementById('simBtn'),
+            list: document.getElementById('networkList'),
+            log: document.getElementById('logConsole'),
+            chart: document.getElementById('signalChart'),
+            disp: {
+                ssid: document.getElementById('dispSSID'),
+                status: document.getElementById('dispStatus'),
+                rssi: document.getElementById('dispRSSI'),
+                rate: document.getElementById('dispRate'),
+                bssid: document.getElementById('dispBSSID'),
+                channel: document.getElementById('dispChannel'),
+                sec: document.getElementById('dispSec'),
+                bar: document.getElementById('qualityBar'),
+                qual: document.getElementById('qualityText')
             }
+        };
 
-            div.innerText = prefix + msg;
-            logConsole.appendChild(div);
+        const ctx = els.chart.getContext('2d');
+        resizeChart();
+        window.addEventListener('resize', resizeChart);
 
-            // 自动滚动到底部
-            logConsole.scrollTop = logConsole.scrollHeight;
-        }
+        // --- 核心逻辑 ---
 
-        function clearLog() {
-            logConsole.innerHTML = '<div class="log-entry log-sys">> Log cleared.</div>';
-        }
-
-        // --- 串口连接 ---
-        connectBtn.addEventListener('click', async () => {
+        els.connect.addEventListener('click', async () => {
             if ("serial" in navigator) {
                 try {
-                    errorBanner.classList.add('hidden');
                     port = await navigator.serial.requestPort();
                     await port.open({ baudRate: 115200 });
-
+                    
                     const textDecoder = new TextDecoderStream();
                     port.readable.pipeTo(textDecoder.writable);
                     reader = textDecoder.readable.getReader();
@@ -274,79 +191,33 @@
 
                     isConnected = true;
                     stopSimulation();
-                    updateUIState(true, "HARDWARE");
-                    appendLog("SYS", "Serial port opened successfully.");
+                    log("SYS", "SERIAL LINK ESTABLISHED");
+                    els.connect.innerText = "LINK ACTIVE";
+                    els.connect.disabled = true;
+                    
                     readLoop();
-
-                    // 自动开始扫描
-                    sendCommand("SCAN");
+                    sendCommand("SCAN"); // Auto scan on connect
 
                 } catch (err) {
-                    console.error('Connection error:', err);
-                    if (err.name === 'SecurityError' || err.message.includes('permissions policy')) {
-                        errorBanner.classList.remove('hidden');
-                        appendLog("ERROR", "Browser Security: Access denied. Download file to run locally.");
-                    } else {
-                        appendLog("ERROR", "Connection failed: " + err.message);
-                    }
+                    log("ERR", err.message);
                 }
             } else {
-                alert('Web Serial API not supported.');
+                alert("Browser not supported. Use Chrome/Edge.");
             }
         });
 
-        // --- 模拟模式 ---
-        simBtn.addEventListener('click', () => {
+        els.scan.addEventListener('click', () => {
+            if (isConnected) sendCommand("SCAN");
+            else if (isSimulating) simulateScan();
+        });
+
+        els.sim.addEventListener('click', () => {
             if (isSimulating) stopSimulation();
             else startSimulation();
         });
 
-        function startSimulation() {
-            isSimulating = true;
-            updateUIState(true, "DEMO MODE");
-            simBtn.innerText = "⏹ Stop Demo";
-            simBtn.classList.replace('bg-slate-700', 'bg-amber-600');
-            appendLog("SYS", "Simulation mode started.");
+        // --- 数据处理 ---
 
-            networkList.innerHTML = "";
-            addNetworkToList("Demo_WiFi_A", -50);
-            addNetworkToList("Demo_WiFi_B", -85);
-        }
-
-        function stopSimulation() {
-            isSimulating = false;
-            clearInterval(simInterval);
-            simInterval = null;
-            if (!isConnected) updateUIState(false);
-            simBtn.innerText = "🧪 Demo Mode";
-            simBtn.classList.replace('bg-amber-600', 'bg-slate-700');
-            appendLog("SYS", "Simulation stopped.");
-        }
-
-        scanBtn.addEventListener('click', () => {
-            networkList.innerHTML = '<div class="text-center text-sky-400 mt-20">Scanning...<br>(Hardware Busy)</div>';
-            appendLog("INFO", "Initiating network scan...");
-
-            if (isConnected) {
-                sendCommand("SCAN");
-            } else if (isSimulating) {
-                setTimeout(() => {
-                    networkList.innerHTML = "";
-                    addNetworkToList("Demo_WiFi_A", -50);
-                    addNetworkToList("Target_X", -70);
-                    appendLog("INFO", "Scan complete (Simulated).");
-                }, 1000);
-            }
-        });
-
-        async function sendCommand(cmd) {
-            if (writer) {
-                await writer.write(cmd + "\n");
-                // Log is handled by firmware echo or UI action
-            }
-        }
-
-        // --- 数据读取 ---
         async function readLoop() {
             let buffer = "";
             try {
@@ -355,166 +226,211 @@
                     if (done) break;
                     buffer += value;
                     let lines = buffer.split("\n");
-                    buffer = lines.pop();
-
+                    buffer = lines.pop(); 
                     for (let line of lines) processLine(line.trim());
                 }
-            } catch (error) {
-                appendLog("ERROR", "Read loop crashed: " + error);
+            } catch (err) {
+                log("ERR", "LINK LOST: " + err);
                 isConnected = false;
-                updateUIState(false);
             }
         }
 
         function processLine(line) {
             if (!line) return;
 
-            // 处理日志包 LOG:LEVEL:MSG
+            // 计算刷新率
+            packetCount++;
+            const now = performance.now();
+            if (now - lastRateCheck > 1000) {
+                els.disp.rate.innerText = packetCount; // Update Hz display
+                packetCount = 0;
+                lastRateCheck = now;
+            }
+
             if (line.startsWith("LOG:")) {
                 const parts = line.split(":");
-                // parts[0] is "LOG", parts[1] is LEVEL, parts[2...] is MSG
-                if (parts.length >= 3) {
-                    const level = parts[1];
-                    const msg = parts.slice(2).join(":"); // Rejoin message if it had colons
-                    appendLog(level, msg);
-                }
-                return;
+                log(parts[1], parts.slice(2).join(":"));
             }
-
-            // 处理数据包
-            if (line.startsWith("LIST:")) {
+            else if (line.startsWith("LIST:")) {
+                // LIST:SSID,RSSI,CHANNEL,BSSID,SECURITY
                 const parts = line.substring(5).split(",");
-                if (parts.length >= 2) addNetworkToList(parts[0], parts[1]);
+                if (parts.length >= 5) {
+                    addNetwork(parts[0], parts[1], parts[2], parts[3], parts[4]);
+                }
             }
             else if (line.startsWith("STATUS:SCAN_START")) {
-                networkList.innerHTML = "";
-            }
-            else if (line.startsWith("STATUS:SCAN_END")) {
-                // Scan finished
+                els.list.innerHTML = "";
+                log("SYS", "SCANNING AIRWAVES...");
             }
             else if (line.startsWith("DATA:")) {
-                const rssi = parseInt(line.substring(5));
-                updateDashboard(rssi);
+                // DATA:RSSI,CHANNEL,BSSID
+                const parts = line.substring(5).split(",");
+                const rssi = parseInt(parts[0]);
+                
+                updateDashboard(rssi, parts[1], parts[2]);
             }
         }
 
-        function updateUIState(connected, modeLabel = "CONNECTED") {
-            if (connected) {
-                statusBadge.className = `px-3 py-1 rounded-full text-xs font-bold border ${modeLabel === "DEMO MODE" ? "bg-amber-900 text-amber-200 border-amber-700" : "bg-green-900 text-green-200 border-green-700"}`;
-                statusBadge.innerText = modeLabel;
-                if (modeLabel !== "DEMO MODE") {
-                    connectBtn.disabled = true;
-                    connectBtn.classList.add('opacity-50', 'cursor-not-allowed');
-                    connectBtn.innerText = "Device Linked";
-                }
-                scanBtn.disabled = false;
-            } else {
-                statusBadge.className = "px-3 py-1 rounded-full text-xs font-bold bg-red-900 text-red-200 border border-red-700";
-                statusBadge.innerText = "DISCONNECTED";
-                connectBtn.disabled = false;
-                connectBtn.classList.remove('opacity-50', 'cursor-not-allowed');
-                connectBtn.innerText = "🔌 Connect Device";
-                scanBtn.disabled = true;
-            }
-        }
-
-        function addNetworkToList(ssid, rssi) {
-            if (!ssid || ssid.length === 0) return;
-
+        function addNetwork(ssid, rssi, channel, bssid, sec) {
+            if (!ssid) return;
+            
             const div = document.createElement('div');
-            div.className = "list-item p-3 border-b border-slate-700 flex justify-between items-center cursor-pointer transition-colors";
+            div.className = "list-item p-3 cursor-pointer text-xs border-b border-slate-800";
             div.innerHTML = `
-                <div class="font-bold text-sky-300 truncate w-2/3">${ssid}</div>
-                <div class="text-sm text-slate-400 font-mono">${rssi} dBm</div>
+                <div class="flex justify-between mb-1">
+                    <span class="font-bold text-slate-200 truncate w-2/3">${ssid}</span>
+                    <span class="text-sky-400 font-mono">${rssi} dBm</span>
+                </div>
+                <div class="flex justify-between text-[10px] text-slate-500 font-mono">
+                    <span>CH:${channel}</span>
+                    <span>${bssid}</span>
+                    <span>${sec}</span>
+                </div>
             `;
-
+            
             div.onclick = () => {
-                // 1. 重置图表数据
+                // UI Selection
+                document.querySelectorAll('.list-item').forEach(e => e.classList.remove('active'));
+                div.classList.add('active');
+                
+                // Set Target
+                currentTarget = { ssid, channel };
+                els.disp.ssid.innerText = ssid;
+                els.disp.status.innerText = "TRACKING LOCKED // FAST SCAN";
+                els.disp.status.className = "text-xs text-green-400 animate-pulse";
+                
+                // Clear Chart
                 chartData.fill(-120);
-                drawChart();
-
-                // 2. 更新UI
-                document.getElementById('targetName').innerText = ssid;
-                appendLog("INFO", "User selected target: " + ssid);
-
-                // UI 高亮
-                document.querySelectorAll('.list-item').forEach(el => el.style.backgroundColor = '');
-                div.style.backgroundColor = '#0ea5e9';
-                div.querySelector('.text-sky-300').classList.remove('text-sky-300');
-                div.querySelector('.font-bold').classList.add('text-white');
-
-                // 3. 发送指令
+                
+                // Send Command: TRACK:SSID:CHANNEL (关键：把信道发回去加速)
                 if (isConnected) {
-                    sendCommand("TRACK:" + ssid);
+                    sendCommand(`TRACK:${ssid}:${channel}`);
                 } else if (isSimulating) {
+                    log("SIM", `Locking onto ${ssid} (CH ${channel})`);
                     clearInterval(simInterval);
-                    appendLog("INFO", "Simulating track for: " + ssid);
-                    let simAngle = 0;
-                    simInterval = setInterval(() => {
-                        simAngle += 0.1;
-                        const simRssi = Math.floor(-60 + Math.sin(simAngle) * 20 + Math.random() * 5);
-                        updateDashboard(simRssi);
-                    }, 100);
+                    simInterval = setInterval(simulateTracking, 100); // 10Hz simulation
                 }
             };
-
-            networkList.appendChild(div);
+            
+            els.list.appendChild(div);
         }
 
-        function updateDashboard(rssi) {
-            const rssiEl = document.getElementById('rssiValue');
-            rssiEl.innerHTML = `${rssi} <span class="text-xl text-slate-500">dBm</span>`;
+        function updateDashboard(rssi, channel, bssid) {
+            // Update Intel
+            els.disp.rssi.innerText = rssi;
+            if (channel) els.disp.channel.innerText = "CH " + channel;
+            if (bssid) els.disp.bssid.innerText = bssid;
 
-            // 更新信号条
-            let percentage = Math.max(0, Math.min(100, (rssi + 100) * 1.5));
-            document.getElementById('rssiBar').style.width = percentage + "%";
+            // Quality Bar
+            // -90 is 0%, -30 is 100%
+            let qual = Math.max(0, Math.min(100, (rssi + 95) * 1.6));
+            els.disp.bar.style.width = qual + "%";
+            els.disp.qual.innerText = Math.floor(qual) + "%";
+            
+            // Color coding
+            if (rssi > -50) els.disp.bar.className = "h-full bg-green-500 w-0 transition-all duration-75";
+            else if (rssi > -70) els.disp.bar.className = "h-full bg-yellow-400 w-0 transition-all duration-75";
+            else els.disp.bar.className = "h-full bg-red-500 w-0 transition-all duration-75";
 
-            // 更新图表
+            // Chart update
             chartData.push(rssi);
             chartData.shift();
             drawChart();
         }
 
+        // --- 绘图 ---
         function drawChart() {
-            ctx.fillStyle = '#000';
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-            // 画网格
-            ctx.strokeStyle = '#1e293b';
+            const w = els.chart.width;
+            const h = els.chart.height;
+            
+            ctx.fillStyle = "#000";
+            ctx.fillRect(0, 0, w, h);
+            
+            // Grid
+            ctx.strokeStyle = "#1e293b";
             ctx.lineWidth = 1;
             ctx.beginPath();
-            for (let i = 0; i < canvas.height; i += 50) {
-                ctx.moveTo(0, i);
-                ctx.lineTo(canvas.width, i);
-            }
+            for (let y = 0; y < h; y += 40) { ctx.moveTo(0, y); ctx.lineTo(w, y); }
+            for (let x = 0; x < w; x += 40) { ctx.moveTo(x, 0); ctx.lineTo(x, h); }
             ctx.stroke();
 
-            // 画波形
-            ctx.strokeStyle = '#38bdf8';
+            // Waveform
+            ctx.strokeStyle = "#38bdf8";
             ctx.lineWidth = 2;
             ctx.beginPath();
-
-            const step = canvas.width / (chartData.length - 1);
-
+            
+            const step = w / (chartData.length - 1);
             for (let i = 0; i < chartData.length; i++) {
-                // Y轴映射: -120(底) 到 -20(顶)
-                const y = canvas.height - ((chartData[i] + 120) / 100 * canvas.height);
+                // Map -120..-20 to h..0
+                let val = chartData[i];
+                if (val < -120) val = -120; 
+                const y = h - ((val + 120) / 100 * h);
+                
                 if (i === 0) ctx.moveTo(0, y);
                 else ctx.lineTo(i * step, y);
             }
             ctx.stroke();
 
-            // 渐变填充
-            ctx.lineTo(canvas.width, canvas.height);
-            ctx.lineTo(0, canvas.height);
-            ctx.closePath();
-            const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
-            gradient.addColorStop(0, 'rgba(56, 189, 248, 0.2)');
-            gradient.addColorStop(1, 'rgba(56, 189, 248, 0)');
-            ctx.fillStyle = gradient;
+            // Gradient Fill
+            ctx.lineTo(w, h);
+            ctx.lineTo(0, h);
+            const grad = ctx.createLinearGradient(0, 0, 0, h);
+            grad.addColorStop(0, "rgba(56, 189, 248, 0.2)");
+            grad.addColorStop(1, "rgba(56, 189, 248, 0)");
+            ctx.fillStyle = grad;
             ctx.fill();
         }
+
+        function resizeChart() {
+            els.chart.width = els.chart.parentElement.offsetWidth;
+            els.chart.height = els.chart.parentElement.offsetHeight;
+        }
+
+        // --- 工具函数 ---
+        async function sendCommand(cmd) {
+            if (writer) await writer.write(cmd + "\n");
+        }
+
+        function log(level, msg) {
+            const d = document.createElement('div');
+            d.innerText = `[${level}] ${msg}`;
+            if (level === "ERR") d.style.color = "#f87171";
+            if (level === "SYS") d.style.color = "#94a3b8";
+            els.log.appendChild(d);
+            els.log.scrollTop = els.log.scrollHeight;
+        }
+
+        // --- 模拟逻辑 ---
+        function startSimulation() {
+            isSimulating = true;
+            els.sim.innerText = "STOP SIM";
+            els.sim.className = "btn px-4 py-1 text-xs text-green-400 border-green-900";
+            simulateScan();
+        }
+        function stopSimulation() {
+            isSimulating = false;
+            clearInterval(simInterval);
+            els.sim.innerText = "DEMO_SIM";
+            els.sim.className = "btn px-4 py-1 text-xs text-slate-400";
+        }
+        function simulateScan() {
+            els.list.innerHTML = "";
+            log("SIM", "Generating fake networks...");
+            setTimeout(() => {
+                addNetwork("Target_Alpha", -55, 6, "AA:BB:CC:11:22:33", "WPA2");
+                addNetwork("Neighbor_Net", -82, 11, "11:22:33:44:55:66", "WPA2");
+                addNetwork("Coffee_Free", -65, 1, "DD:EE:FF:00:11:22", "OPEN");
+            }, 500);
+        }
+        let simAngle = 0;
+        function simulateTracking() {
+            simAngle += 0.2;
+            const base = -50;
+            const noise = (Math.random() - 0.5) * 5;
+            const val = base + Math.sin(simAngle) * 30 + noise;
+            updateDashboard(Math.floor(val), currentTarget.channel, "AA:BB:CC:11:22:33");
+        }
+
     </script>
 </body>
-
 </html>
