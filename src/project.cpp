@@ -194,13 +194,3 @@ String macToString(const uint8_t* mac) {
   return String(buf);
 }
 
-String securityToString(int security) {
-  switch (security) {
-    case WLAN_SEC_UNSEC: return "OPEN";
-    case WLAN_SEC_WEP: return "WEP";
-    case WLAN_SEC_WPA: return "WPA";
-    case WLAN_SEC_WPA2: return "WPA2";
-    case WLAN_SEC_WPA3: return "WPA3";
-    default: return "SECURE";
-  }
-}
