@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Photon 2 Wi-Fi Radar Controller</title>
+    <!-- 使用 Tailwind CSS 进行快速美化 -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { background-color: #0f172a; color: #e2e8f0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        .panel { background-color: #1e293b; border-radius: 0.75rem; border: 1px solid #334155; padding: 1.5rem; }
+        .btn { cursor: pointer; transition: all 0.2s; }
+        .btn:hover { filter: brightness(110%); transform: translateY(-1px); }
+        .btn:disabled { opacity: 0.5; cursor: not-allowed; filter: none; }
+        .list-item:hover { background-color: #334155; }
+        canvas { width: 100%; height: 300px; border-radius: 0.5rem; background: #000; border: 1px solid #334155; }
+    </style>
+</head>
+<body class="p-6 max-w-5xl mx-auto">
+
+    <!-- 顶部标题栏 -->
+    <header class="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
+        <div>
+            <h1 class="text-3xl font-bold text-sky-400">Wi-Fi Signal Radar</h1>
+            <p class="text-slate-400 text-sm">Phase 1: Manual Test Tool via Web Serial</p>
+        </div>
+        <div class="flex gap-3 items-center">
+            <span id="statusBadge" class="px-3 py-1 rounded-full text-xs font-bold bg-red-900 text-red-200 border border-red-700">DISCONNECTED</span>
+            
+            <!-- 模拟按钮：用于无硬件演示 -->
+            <button id="simBtn" class="btn bg-slate-700 hover:bg-slate-600 text-slate-200 px-4 py-2 rounded-lg font-semibold text-sm border border-slate-600">
+                🧪 Demo Mode
+            </button>
+
+            <button id="connectBtn" class="btn bg-sky-600 hover:bg-sky-500 text-white px-6 py-2 rounded-lg font-semibold shadow-lg shadow-sky-900/50">
+                🔌 Connect Device
+            </button>
+        </div>
+    </header>
+
+    <!-- 错误提示区 -->
+    <div id="errorBanner" class="hidden mb-6 bg-amber-900/50 border border-amber-600 text-amber-100 p-4 rounded-lg flex items-start gap-3">
+        <span class="text-2xl">⚠️</span>
+        <div>
+            <h3 class="font-bold">Cannot Access Serial Port</h3>
+            <p class="text-sm opacity-90">浏览器预览环境禁止了串口访问。请点击右上角的 <strong>下载 (Download)</strong> 按钮保存此文件，然后在本地使用 Chrome 打开。</p>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        
+        <!-- 左侧：扫描列表 -->
+        <div class="panel col-span-1 flex flex-col h-[500px]">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-xl font-semibold">Networks</h2>
+                <button id="scanBtn" class="btn bg-slate-600 hover:bg-slate-500 text-white px-3 py-1 rounded text-sm" disabled>
+                    🔄 Scan
+                </button>
+            </div>
+            <div class="overflow-y-auto flex-1 pr-1 custom-scroll" id="networkList">
+                <div class="text-center text-slate-500 mt-10">
+                    Click "Connect Device" to start.<br>Or try "Demo Mode".
+                </div>
+            </div>
+        </div>
+
+        <!-- 右侧：仪表盘 -->
+        <div class="panel col-span-1 lg:col-span-2 flex flex-col">
+            <div class="mb-4 flex justify-between items-end">
+                <div>
+                    <h2 class="text-slate-400 text-sm uppercase tracking-wider">Tracking Target</h2>
+                    <div id="targetName" class="text-2xl font-bold text-white">None Selected</div>
+                </div>
+                <div class="text-right">
+                    <h2 class="text-slate-400 text-sm uppercase tracking-wider">Signal Strength (RSSI)</h2>
+                    <div id="rssiValue" class="text-5xl font-mono font-bold text-sky-400">- -- <span class="text-xl text-slate-500">dBm</span></div>
+                </div>
+            </div>
+
+            <!-- 信号条 -->
+            <div class="w-full bg-slate-800 rounded-full h-4 mb-6 overflow-hidden border border-slate-700">
+                <div id="rssiBar" class="bg-gradient-to-r from-red-500 via-yellow-400 to-green-500 h-full w-0 transition-all duration-300 ease-out"></div>
+            </div>
+
+            <!-- 画布：实时波形 -->
+            <canvas id="signalChart"></canvas>
+            
+            <div class="mt-4 text-xs text-slate-500 font-mono flex justify-between">
+                <span>Log: <span id="logMsg" class="text-sky-300">System ready.</span></span>
+                <span id="fpsCounter" class="text-slate-600"></span>
+            </div>
+        </div>
+    </div>
+
+    <!-- JavaScript 逻辑 -->
+    <script>
+        let port;
+        let reader;
+        let writer;
+        let isConnected = false;
+        let isSimulating = false;
+        let simInterval;
+        let chartData = new Array(200).fill(-120); // 存储历史数据用于绘图
+
+        const connectBtn = document.getElementById('connectBtn');
+        const simBtn = document.getElementById('simBtn');
+        const scanBtn = document.getElementById('scanBtn');
+        const statusBadge = document.getElementById('statusBadge');
+        const networkList = document.getElementById('networkList');
+        const logMsg = document.getElementById('logMsg');
+        const errorBanner = document.getElementById('errorBanner');
+        const canvas = document.getElementById('signalChart');
+        const ctx = canvas.getContext('2d');
+
+        // 设置画布分辨率
+        canvas.width = canvas.parentElement.offsetWidth;
+        canvas.height = 300;
+        
+        // 窗口大小改变时重置画布
+        window.addEventListener('resize', () => {
+            canvas.width = canvas.parentElement.offsetWidth;
+            drawChart();
+        });
+
+        // --- 1. 串口连接逻辑 ---
+        connectBtn.addEventListener('click', async () => {
+            if ("serial" in navigator) {
+                try {
+                    errorBanner.classList.add('hidden');
+                    port = await navigator.serial.requestPort();
+                    await port.open({ baudRate: 115200 });
+                    
+                    const textDecoder = new TextDecoderStream();
+                    const readableStreamClosed = port.readable.pipeTo(textDecoder.writable);
+                    reader = textDecoder.readable.getReader();
+
+                    const textEncoder = new TextEncoderStream();
+                    const writableStreamClosed = textEncoder.readable.pipeTo(port.writable);
+                    writer = textEncoder.writable.getWriter();
+
+                    isConnected = true;
+                    stopSimulation(); // 如果正在模拟，停止它
+                    updateUIState(true, "HARDWARE");
+                    readLoop();
+                    
+                    // 连接后自动发送一次扫描指令
+                    sendCommand("SCAN");
+
+                } catch (err) {
+                    console.error('Connection error:', err);
+                    // 专门处理权限策略错误 (在iframe中运行时常见)
+                    if (err.name === 'SecurityError' || err.message.includes('permissions policy')) {
+                        errorBanner.classList.remove('hidden');
+                        logMsg.innerText = "Error: Blocked by browser security policy.";
+                    } else {
+                        logMsg.innerText = "Error: " + err.message;
+                    }
+                }
+            } else {
+                alert('Web Serial API not supported. Please use Chrome or Edge.');
+            }
+        });
+
+        // --- 模拟模式逻辑 ---
+        simBtn.addEventListener('click', () => {
+            if (isSimulating) {
+                stopSimulation();
+            } else {
+                startSimulation();
+            }
+        });
+
+        function startSimulation() {
+            isSimulating = true;
+            updateUIState(true, "DEMO MODE");
+            simBtn.innerText = "⏹ Stop Demo";
+            simBtn.classList.replace('bg-slate-700', 'bg-amber-600');
+            logMsg.innerText = "Simulation started. Fake data generating...";
+            
+            // 模拟扫描结果
+            networkList.innerHTML = "";
+            addNetworkToList("Simulated_WiFi_A", -50);
+            addNetworkToList("Neighbor_Net_5G", -85);
+            addNetworkToList("CoffeeShop_Free", -70);
+        }
+
+        function stopSimulation() {
+            isSimulating = false;
+            clearInterval(simInterval);
+            simInterval = null;
+            if(!isConnected) {
+                updateUIState(false);
+            }
+            simBtn.innerText = "🧪 Demo Mode";
+            simBtn.classList.replace('bg-amber-600', 'bg-slate-700');
+            logMsg.innerText = "Simulation stopped.";
+        }
+
+        // --- 扫描与指令 ---
+        scanBtn.addEventListener('click', () => {
+            networkList.innerHTML = '<div class="text-center text-sky-400 mt-10">Scanning...<br>(Takes ~3 seconds)</div>';
+            if (isConnected) {
+                sendCommand("SCAN");
+            } else if (isSimulating) {
+                setTimeout(() => {
+                    networkList.innerHTML = "";
+                    addNetworkToList("Simulated_WiFi_A", Math.floor(Math.random() * 30 - 80));
+                    addNetworkToList("Target_Router_X", Math.floor(Math.random() * 20 - 60));
+                    logMsg.innerText = "Simulated scan complete.";
+                }, 1000);
+            }
+        });
+
+        async function sendCommand(cmd) {
+            if(writer) {
+                await writer.write(cmd + "\n");
+                logMsg.innerText = "Sent: " + cmd;
+            }
+        }
+
+        // --- 2. 数据读取与解析 ---
+        async function readLoop() {
+            let buffer = "";
+            
+            try {
+                while (true) {
+                    const { value, done } = await reader.read();
+                    if (done) break;
+                    
+                    buffer += value;
+                    let lines = buffer.split("\n");
+                    buffer = lines.pop(); // 保留最后一个不完整的片段
+
+                    for (let line of lines) {
+                        processLine(line.trim());
+                    }
+                }
+            } catch (error) {
+                console.error("Read error:", error);
+                logMsg.innerText = "Read Error: " + error;
+                // 断开连接处理
+                isConnected = false;
+                updateUIState(false);
+            }
+        }
+
+        function processLine(line) {
+            if (!line) return;
+
+            if (line.startsWith("LIST:")) {
+                const parts = line.substring(5).split(",");
+                if(parts.length >= 2) {
+                    addNetworkToList(parts[0], parts[1]);
+                }
+            } 
+            else if (line.startsWith("STATUS:SCAN_START")) {
+                networkList.innerHTML = "";
+            }
+            else if (line.startsWith("STATUS:SCAN_END")) {
+                logMsg.innerText = "Hardware scan complete.";
+            }
+            else if (line.startsWith("DATA:")) {
+                const rssi = parseInt(line.substring(5));
+                updateDashboard(rssi);
+            }
+        }
+
+        // --- 3. UI 更新逻辑 ---
+        function updateUIState(connected, modeLabel = "CONNECTED") {
+            if(connected) {
+                statusBadge.className = `px-3 py-1 rounded-full text-xs font-bold border ${modeLabel === "DEMO MODE" ? "bg-amber-900 text-amber-200 border-amber-700" : "bg-green-900 text-green-200 border-green-700"}`;
+                statusBadge.innerText = modeLabel;
+                
+                if (modeLabel !== "DEMO MODE") {
+                    connectBtn.disabled = true;
+                    connectBtn.classList.add('opacity-50', 'cursor-not-allowed');
+                    connectBtn.innerText = "Device Linked";
+                }
+                scanBtn.disabled = false;
+            } else {
+                statusBadge.className = "px-3 py-1 rounded-full text-xs font-bold bg-red-900 text-red-200 border border-red-700";
+                statusBadge.innerText = "DISCONNECTED";
+                connectBtn.disabled = false;
+                connectBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+                connectBtn.innerText = "🔌 Connect Device";
+                scanBtn.disabled = true;
+            }
+        }
+
+        function addNetworkToList(ssid, rssi) {
+            if(!ssid || ssid.length === 0) return;
+
+            const div = document.createElement('div');
+            div.className = "list-item p-3 border-b border-slate-700 flex justify-between items-center cursor-pointer transition-colors";
+            div.innerHTML = `
+                <div class="font-bold text-sky-300 truncate w-2/3">${ssid}</div>
+                <div class="text-sm text-slate-400 font-mono">${rssi} dBm</div>
+            `;
+            
+            div.onclick = () => {
+                document.getElementById('targetName').innerText = ssid;
+                
+                // UI 高亮
+                document.querySelectorAll('.list-item').forEach(el => el.style.backgroundColor = '');
+                div.style.backgroundColor = '#0ea5e9';
+                div.querySelector('.text-sky-300').classList.remove('text-sky-300');
+                div.querySelector('.font-bold').classList.add('text-white');
+
+                // 启动追踪
+                if (isConnected) {
+                    sendCommand("TRACK:" + ssid);
+                } else if (isSimulating) {
+                    // 模拟追踪数据生成
+                    clearInterval(simInterval);
+                    logMsg.innerText = "Simulating tracking for " + ssid;
+                    let simAngle = 0;
+                    simInterval = setInterval(() => {
+                        // 生成一个正弦波模拟旋转信号变化
+                        simAngle += 0.1;
+                        const baseSignal = -60;
+                        const variation = Math.sin(simAngle) * 20; // +/- 20dB
+                        const noise = Math.random() * 5;
+                        const simRssi = Math.floor(baseSignal + variation + noise);
+                        updateDashboard(simRssi);
+                    }, 100);
+                }
+            };
+            
+            networkList.appendChild(div);
+        }
+
+        function updateDashboard(rssi) {
+            const rssiEl = document.getElementById('rssiValue');
+            rssiEl.innerHTML = `${rssi} <span class="text-xl text-slate-500">dBm</span>`;
+            
+            // 进度条颜色逻辑
+            let barColorClass = "bg-red-500";
+            if (rssi > -50) barColorClass = "bg-green-500";
+            else if (rssi > -70) barColorClass = "bg-yellow-400";
+            
+            let percentage = Math.max(0, Math.min(100, (rssi + 100) * 1.5)); 
+            const bar = document.getElementById('rssiBar');
+            bar.style.width = percentage + "%";
+            // 我们可以用 gradient，这里保持原样
+            
+            chartData.push(rssi);
+            chartData.shift();
+            drawChart();
+        }
+
+        // --- 4. 绘图逻辑 (Canvas) ---
+        function drawChart() {
+            ctx.fillStyle = '#000';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // 画网格
+            ctx.strokeStyle = '#1e293b';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            for(let i=0; i<canvas.height; i+=50) {
+                ctx.moveTo(0, i);
+                ctx.lineTo(canvas.width, i);
+            }
+            ctx.stroke();
+
+            // 画波形
+            ctx.strokeStyle = '#38bdf8';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            
+            const step = canvas.width / (chartData.length - 1);
+            
+            for (let i = 0; i < chartData.length; i++) {
+                // -120 到 -20 映射到 height 到 0
+                const y = canvas.height - ((chartData[i] + 120) / 100 * canvas.height);
+                if (i === 0) ctx.moveTo(0, y);
+                else ctx.lineTo(i * step, y);
+            }
+            ctx.stroke();
+            
+            // 渐变填充
+            ctx.lineTo(canvas.width, canvas.height);
+            ctx.lineTo(0, canvas.height);
+            ctx.closePath();
+            const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
+            gradient.addColorStop(0, 'rgba(56, 189, 248, 0.2)');
+            gradient.addColorStop(1, 'rgba(56, 189, 248, 0)');
+            ctx.fillStyle = gradient;
+            ctx.fill();
+        }
+    </script>
+</body>
+</html>
