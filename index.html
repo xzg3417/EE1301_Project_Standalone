@@ -3,13 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Photon 2 Wi-Fi Tactical Radar</title>
+    <title>Photon 2 Signal Hunter v13.1 (Fixes)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        body { background-color: #0b1121; color: #e2e8f0; font-family: 'Segoe UI', 'Roboto Mono', monospace; }
-        .panel { background-color: #151e32; border: 1px solid #2d3b55; border-radius: 4px; }
+        body { background-color: #0b1121; color: #e2e8f0; font-family: 'Segoe UI', 'Roboto Mono', monospace; overflow: hidden; }
+        .panel { background-color: #151e32; border: 1px solid #2d3b55; border-radius: 4px; display: flex; flex-direction: column; }
         
-        /* 科技感按钮 */
         .btn { 
             background: linear-gradient(180deg, #1e293b 0%, #0f172a 100%);
             border: 1px solid #334155;
@@ -18,205 +17,716 @@
         .btn:hover { border-color: #38bdf8; color: #38bdf8; box-shadow: 0 0 10px rgba(56,189,248,0.2); }
         .btn:active { transform: translateY(1px); }
         
-        /* 列表项 */
-        .list-item { border-left: 2px solid transparent; }
+        /* 列表高亮 */
+        .list-item { border-left: 3px solid transparent; transition: all 0.2s; }
         .list-item:hover { background-color: #1e293b; border-left-color: #64748b; }
         .list-item.active { background-color: #0c4a6e; border-left-color: #38bdf8; }
 
-        /* 滚动条 */
-        .custom-scroll::-webkit-scrollbar { width: 6px; }
+        .custom-scroll::-webkit-scrollbar { width: 6px; height: 6px; }
         .custom-scroll::-webkit-scrollbar-track { background: #0b1121; }
         .custom-scroll::-webkit-scrollbar-thumb { background: #334155; }
         
-        /* 数据显示格 */
         .data-box { background: #0f172a; border: 1px solid #1e293b; padding: 10px; }
-        .data-label { color: #64748b; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 2px; }
-        .data-value { color: #e2e8f0; font-family: 'Courier New', monospace; font-weight: bold; }
         .highlight { color: #38bdf8; text-shadow: 0 0 5px rgba(56,189,248,0.4); }
 
-        canvas { background: #000; border: 1px solid #334155; }
+        /* 表格样式 */
+        table { width: 100%; border-collapse: collapse; font-size: 0.75rem; table-layout: fixed; }
+        th { text-align: left; padding: 6px; border-bottom: 1px solid #334155; color: #94a3b8; background: #0f172a; position: sticky; top: 0; z-index: 10; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        td { padding: 6px; border-bottom: 1px solid #1e293b; color: #cbd5e1; border-right: 1px solid #1e293b; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        tr.main-row:hover { background-color: #1e293b; cursor: pointer; }
+        tr.sub-row { background-color: #0f172a; }
+        tr.active-row { background-color: #0c4a6e !important; border-left: 2px solid #38bdf8; }
+
+        canvas { background: #000; border: 1px solid #334155; border-radius: 4px; display: block; }
+        
+        /* 选项卡 */
+        .tab-content { display: none; height: 100%; }
+        .tab-content.active { display: flex; }
+        
+        /* 输入框 */
+        .dark-input { background: #0f172a; border: 1px solid #334155; color: white; padding: 4px 8px; border-radius: 4px; }
+        .dark-input:focus { border-color: #38bdf8; outline: none; }
+
+        /* 拖拽条 */
+        .resizer {
+            width: 6px;
+            background: #0f172a;
+            cursor: col-resize;
+            border-left: 1px solid #1e293b;
+            border-right: 1px solid #1e293b;
+            flex-shrink: 0;
+            transition: background 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .resizer:hover, .resizer.resizing { background: #38bdf8; }
+        .resizer::after { content: '||'; color: #475569; font-size: 8px; }
+        .resizer:hover::after { color: #000; }
     </style>
 </head>
-<body class="p-4 h-screen flex flex-col overflow-hidden">
+<body class="p-2 h-screen flex flex-col overflow-hidden select-none">
 
-    <!-- Header -->
-    <header class="flex justify-between items-center mb-4 shrink-0">
-        <div class="flex items-center gap-3">
-            <div class="w-3 h-3 bg-sky-500 rounded-full animate-pulse shadow-[0_0_10px_#0ea5e9]"></div>
-            <div>
-                <h1 class="text-2xl font-bold tracking-wider text-sky-500">WIFI_TACTICAL_RADAR</h1>
-                <p class="text-[10px] text-slate-500 tracking-[0.2em] uppercase">Photon 2 // RTL872x // Turbo Scan</p>
+    <!-- Header & Nav -->
+    <header class="shrink-0 mb-2">
+        <div class="flex justify-between items-center mb-2">
+            <div class="flex items-center gap-3">
+                <div class="w-3 h-3 bg-indigo-500 rounded-full animate-pulse shadow-[0_0_10px_#6366f1]"></div>
+                <div>
+                    <h1 class="text-xl font-bold tracking-wider text-white">SIGNAL_HUNTER <span class="text-indigo-400">v13.1</span></h1>
+                    <p class="text-[9px] text-slate-500 tracking-[0.2em] uppercase">ANALYTICS ENGINE</p>
+                </div>
+            </div>
+            
+            <div class="flex gap-1 bg-slate-900 p-1 rounded border border-slate-700">
+                <button onclick="switchTab('live')" id="tab-live" class="px-4 py-1 text-xs font-bold rounded bg-indigo-600 text-white">LIVE MONITOR</button>
+                <button onclick="switchTab('map')" id="tab-map" class="px-4 py-1 text-xs font-bold rounded hover:bg-slate-700 text-slate-400">MANUAL MAPPING</button>
+            </div>
+
+            <div class="flex gap-2">
+                <button id="connectBtn" class="btn px-4 py-1 text-xs text-sky-400 font-bold border-sky-900">CONNECT SERIAL</button>
             </div>
         </div>
-        <div class="flex gap-2">
-            <button id="simBtn" class="btn px-4 py-1 text-xs text-slate-400">DEMO_SIM</button>
-            <button id="connectBtn" class="btn px-4 py-1 text-xs text-sky-400 font-bold border-sky-900">CONNECT_SERIAL</button>
+
+        <!-- P2 Device Status Bar -->
+        <div class="bg-slate-900 border border-slate-700 rounded text-xs font-mono text-slate-400 p-1 px-2 flex flex-wrap gap-x-4 gap-y-1 items-center">
+            <span class="font-bold text-sky-600">DEVICE:</span>
+            <span id="p2State" class="text-red-500 font-bold">OFFLINE</span>
+            <div class="w-px h-3 bg-slate-700 mx-1"></div>
+            <span class="text-slate-500">TARGET:</span>
+            <span id="globalTarget" class="text-white font-bold truncate max-w-[150px]">NONE</span>
+            <div class="ml-auto flex gap-4">
+                <span>RSSI: <span id="p2RSSI" class="text-white">--</span></span>
+                <span>IP: <span id="p2IP" class="text-sky-300">--</span></span>
+            </div>
         </div>
     </header>
 
-    <!-- Main Grid -->
-    <div class="flex-1 grid grid-cols-12 gap-4 overflow-hidden">
+    <!-- CONTENT AREA -->
+    <div class="flex-1 overflow-hidden relative">
         
-        <!-- Left: Network List -->
-        <div class="col-span-3 panel flex flex-col overflow-hidden">
-            <div class="p-3 border-b border-slate-800 flex justify-between items-center bg-slate-900/50">
-                <span class="text-xs font-bold text-slate-400">DETECTED SIGNALS</span>
-                <button id="scanBtn" class="text-xs text-sky-500 hover:text-white disabled:opacity-50">[ REFRESH ]</button>
+        <!-- VIEW 1: LIVE MONITOR (Grid Layout) -->
+        <div id="view-live" class="tab-content active grid grid-cols-12 gap-2 h-full">
+            <div class="col-span-3 panel overflow-hidden">
+                <div class="p-2 border-b border-slate-800 flex justify-between items-center bg-slate-900/50">
+                    <span class="text-xs font-bold text-slate-400">NETWORKS</span>
+                    <button id="scanBtn" class="text-xs text-sky-500 hover:text-white disabled:opacity-50">[ REFRESH ]</button>
+                </div>
+                <div id="networkList" class="flex-1 overflow-y-auto custom-scroll p-0">
+                    <div class="p-4 text-center text-xs text-slate-600 font-mono">
+                        > WAITING FOR SERIAL...
+                    </div>
+                </div>
             </div>
-            <div id="networkList" class="flex-1 overflow-y-auto custom-scroll p-0">
-                <div class="p-4 text-center text-xs text-slate-600 font-mono">
-                    > SYSTEM IDLE<br>> WAITING FOR LINK
+
+            <div class="col-span-9 flex flex-col gap-2 overflow-hidden">
+                <div class="grid grid-cols-4 gap-2 h-20 shrink-0">
+                    <div class="col-span-2 data-box flex flex-col justify-center">
+                        <div class="data-label">Live Signal Strength</div>
+                        <div class="flex items-baseline gap-2">
+                            <span id="dispRSSI" class="text-4xl highlight">--</span>
+                            <span class="text-xs text-slate-500">dBm</span>
+                        </div>
+                    </div>
+                    <div class="col-span-2 data-box flex flex-col justify-center">
+                        <div class="data-label">Update Frequency</div>
+                        <div class="flex items-baseline gap-2">
+                            <span id="dispRate" class="text-2xl text-green-400">0</span>
+                            <span class="text-xs text-slate-500">Hz</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="flex-1 panel relative flex flex-col">
+                    <div class="absolute top-2 left-2 text-[10px] text-slate-500 z-10">LIVE TIME-DOMAIN PLOT</div>
+                    <canvas id="signalChart" class="flex-1 w-full h-full"></canvas>
                 </div>
             </div>
         </div>
 
-        <!-- Right: Dashboard -->
-        <div class="col-span-9 flex flex-col gap-4 overflow-hidden">
+        <!-- VIEW 2: MANUAL MAPPING (Resizable Flex Layout) -->
+        <div id="view-map" class="tab-content w-full h-full">
             
-            <!-- Top: Intel Grid -->
-            <div class="grid grid-cols-4 gap-4 h-24 shrink-0">
-                <div class="col-span-2 data-box flex flex-col justify-center relative overflow-hidden">
-                    <div class="absolute top-0 right-0 p-1 text-[10px] text-slate-700">TARGET_SSID</div>
-                    <div id="dispSSID" class="text-2xl text-white font-bold truncate">--</div>
-                    <div id="dispStatus" class="text-xs text-slate-500">NO TARGET LOCKED</div>
-                </div>
-                <div class="data-box flex flex-col justify-center">
-                    <div class="data-label">Signal Strength</div>
-                    <div class="flex items-baseline gap-2">
-                        <span id="dispRSSI" class="text-4xl highlight">--</span>
-                        <span class="text-xs text-slate-500">dBm</span>
+            <!-- Left Panel: Controls -->
+            <div id="panel-left" class="panel min-w-[200px]" style="width: 25%;">
+                <div class="flex-1 overflow-y-auto custom-scroll p-2 flex flex-col gap-2">
+                    <!-- Dial -->
+                    <div class="p-2 flex flex-col items-center justify-center bg-slate-900/50 rounded border border-slate-800">
+                        <h3 class="text-sky-400 font-bold mb-1 text-[10px] tracking-widest">DIRECTION</h3>
+                        <div class="relative w-full aspect-square max-h-48">
+                            <canvas id="dialCanvas" class="w-full h-full cursor-pointer"></canvas>
+                            <div class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-center pointer-events-none">
+                                <div class="text-[10px] text-slate-500">ANGLE</div>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-2 mt-2">
+                            <input type="number" id="angleInput" class="dark-input w-16 text-center font-bold font-mono text-sm" value="0" min="0" max="360">
+                            <span class="text-xs text-slate-400">deg</span>
+                        </div>
                     </div>
-                </div>
-                <div class="data-box flex flex-col justify-center">
-                    <div class="data-label">Update Rate</div>
-                    <div class="flex items-baseline gap-2">
-                        <span id="dispRate" class="text-2xl text-green-400">0</span>
-                        <span class="text-xs text-slate-500">Hz</span>
+
+                    <!-- Measurement Settings -->
+                    <div class="p-2 border border-slate-700 rounded bg-slate-900/20">
+                        <div class="flex justify-between items-center border-b border-slate-700 pb-1 mb-2">
+                            <span class="text-[10px] font-bold text-white">MEASURE</span>
+                        </div>
+                        <div class="grid grid-cols-1 gap-2 mb-2">
+                            <div>
+                                <label class="text-[10px] text-slate-400 block">Target SSID</label>
+                                <div id="mapTargetSSID" class="text-xs font-bold text-sky-400 truncate bg-slate-900 px-1 py-0.5 rounded">NONE</div>
+                            </div>
+                            <div class="flex justify-between items-center">
+                                <label class="text-[10px] text-slate-400">Samples:</label>
+                                <input type="number" id="sampleCountInput" class="dark-input w-16 text-xs" value="2" min="1" max="50">
+                            </div>
+                        </div>
+                        <button id="measureBtn" class="btn w-full py-2 text-xs font-bold text-white bg-sky-700 hover:bg-sky-600 disabled:opacity-50 mb-1">
+                            START MEASUREMENT
+                        </button>
+                        <div class="w-full bg-slate-800 h-1.5 rounded-full overflow-hidden mb-1">
+                            <div id="measureProgress" class="h-full bg-green-500 w-0 transition-all duration-200"></div>
+                        </div>
+                        <div id="measureStatus" class="text-center text-[9px] text-slate-500 h-3">Ready</div>
+                    </div>
+
+                    <!-- Tools -->
+                    <div class="p-2 border border-yellow-900/30 rounded bg-yellow-900/5">
+                        <div class="flex justify-between items-center mb-1">
+                            <h3 class="text-[10px] font-bold text-yellow-500">TOOLS</h3>
+                        </div>
+                        <button onclick="calculateSource()" class="btn w-full py-1 text-[10px] font-bold text-yellow-400 border-yellow-800 hover:bg-yellow-900/40 mb-1">
+                            CALCULATE SOURCE
+                        </button>
+                        <div id="predictionResult" class="text-center text-[10px] font-mono text-slate-400 min-h-[1rem] mb-2">--</div>
+                        
+                        <div class="grid grid-cols-2 gap-1">
+                            <button onclick="generateTestData()" class="btn py-1 text-[9px] text-slate-300 border-slate-600">GEN TEST DATA</button>
+                            <label class="btn py-1 text-[9px] text-slate-300 border-slate-600 cursor-pointer text-center block">
+                                IMPORT CSV
+                                <input type="file" id="importInput" accept=".csv" class="hidden" onchange="importCSV(this)">
+                            </label>
+                        </div>
                     </div>
                 </div>
             </div>
 
-            <!-- Middle: Technical Details -->
-            <div class="grid grid-cols-4 gap-4 shrink-0">
-                <div class="data-box">
-                    <div class="data-label">BSSID (MAC Address)</div>
-                    <div id="dispBSSID" class="data-value text-sky-300 text-sm">--:--:--:--:--:--</div>
+            <!-- Resizer 1 -->
+            <div class="resizer" id="resizer-1"></div>
+
+            <!-- Center Panel: Radar -->
+            <div id="panel-center" class="panel flex-1 min-w-[200px] relative bg-black overflow-hidden">
+                <div class="absolute top-2 left-2 text-[10px] text-slate-500 z-10 pointer-events-none">RADAR PLOT</div>
+                <!-- Cursor Info Overlay -->
+                <div id="radarTooltip" class="absolute hidden bg-slate-800 border border-slate-600 text-xs text-white p-2 rounded z-20 pointer-events-none whitespace-nowrap shadow-xl">Tooltip</div>
+                <div class="w-full h-full flex items-center justify-center overflow-hidden">
+                    <canvas id="radarCanvas" class="cursor-crosshair"></canvas>
                 </div>
-                <div class="data-box">
-                    <div class="data-label">Channel (Frequency)</div>
-                    <div id="dispChannel" class="data-value text-yellow-400">CH --</div>
-                </div>
-                <div class="data-box">
-                    <div class="data-label">Security Protocol</div>
-                    <div id="dispSec" class="data-value text-purple-400">--</div>
-                </div>
-                <div class="data-box relative">
-                    <div class="data-label">Signal Quality</div>
-                    <div class="w-full bg-slate-800 h-2 mt-2 rounded-full overflow-hidden">
-                        <div id="qualityBar" class="h-full bg-sky-500 w-0 transition-all duration-100"></div>
+            </div>
+
+            <!-- Resizer 2 -->
+            <div class="resizer" id="resizer-2"></div>
+
+            <!-- Right Panel: Data Table -->
+            <div id="panel-right" class="panel min-w-[200px]" style="width: 25%;">
+                <div class="p-2 border-b border-slate-800 flex justify-between items-center bg-slate-900 shrink-0">
+                    <span class="text-xs font-bold text-slate-400">DATA LOG</span>
+                    <div class="flex gap-1">
+                        <button onclick="exportCSV()" class="text-[9px] text-sky-400 hover:text-white border border-sky-900 px-1 rounded">Exp</button>
+                        <button onclick="clearMapData()" class="text-[9px] text-red-400 hover:text-white border border-red-900 px-1 rounded">Clr</button>
                     </div>
-                    <div id="qualityText" class="absolute bottom-1 right-2 text-[10px] text-slate-400">0%</div>
+                </div>
+                <div class="flex-1 overflow-y-auto custom-scroll" id="tableContainer">
+                    <table class="w-full">
+                        <thead>
+                            <tr>
+                                <th class="w-6"></th>
+                                <th class="w-10">Ang</th>
+                                <th class="w-10">RSSI</th>
+                                <th>#</th>
+                                <th class="w-8">Del</th>
+                            </tr>
+                        </thead>
+                        <tbody id="dataTableBody"></tbody>
+                    </table>
                 </div>
             </div>
 
-            <!-- Bottom: Real-time Chart -->
-            <div class="flex-1 panel relative flex flex-col">
-                <div class="absolute top-2 left-2 text-[10px] text-slate-500 z-10">RSSI HISTORY // T-MINUS 10s</div>
-                <canvas id="signalChart" class="flex-1 w-full h-full"></canvas>
-            </div>
-
-            <!-- Logger -->
-            <div class="h-32 panel bg-black font-mono text-xs overflow-y-auto custom-scroll p-2 text-slate-400" id="logConsole">
-                <div class="text-sky-600">> TERMINAL READY...</div>
-            </div>
         </div>
     </div>
 
+    <!-- Log -->
+    <div class="h-20 shrink-0 panel bg-black font-mono text-xs overflow-y-auto custom-scroll p-1 px-2 text-slate-400 border-t border-slate-800 mt-2" id="logConsole">
+        <div class="text-sky-600">> SYSTEM INITIALIZED...</div>
+    </div>
+
     <script>
-        // --- 系统变量 ---
+        // --- 系统状态 ---
+        let currentTab = 'live';
         let port, reader, writer;
         let isConnected = false;
-        let isSimulating = false;
-        let simInterval, chartInterval;
-        let chartData = new Array(300).fill(-120);
         
-        // 性能监控
-        let lastPacketTime = 0;
-        let packetCount = 0;
-        let lastRateCheck = 0;
+        // --- 实时数据 ---
+        let liveTarget = { ssid: "", channel: 0 };
+        let liveChartData = new Array(150).fill(-120);
+        let packetCount = 0, lastRateCheck = 0;
 
-        // 当前追踪信息
-        let currentTarget = { ssid: "", channel: 0 };
+        // --- 制图数据 ---
+        let mapTarget = { ssid: "", channel: 0 };
+        let mapData = []; 
+        let measurementID = 1;
+        let isMeasuring = false;
+        let currentSamples = [];
+        let requiredSamples = 2;
+        let predictedAngle = null; 
+        let radarPoints = []; 
+        let hoveredPointId = null;
 
-        // --- DOM 元素 ---
+        // --- DOM Elements ---
         const els = {
-            connect: document.getElementById('connectBtn'),
-            scan: document.getElementById('scanBtn'),
-            sim: document.getElementById('simBtn'),
+            tabs: { live: document.getElementById('tab-live'), map: document.getElementById('tab-map') },
+            views: { live: document.getElementById('view-live'), map: document.getElementById('view-map') },
+            panels: { left: document.getElementById('panel-left'), center: document.getElementById('panel-center'), right: document.getElementById('panel-right') },
+            // Live
             list: document.getElementById('networkList'),
-            log: document.getElementById('logConsole'),
-            chart: document.getElementById('signalChart'),
+            liveChart: document.getElementById('signalChart'),
             disp: {
-                ssid: document.getElementById('dispSSID'),
-                status: document.getElementById('dispStatus'),
                 rssi: document.getElementById('dispRSSI'),
                 rate: document.getElementById('dispRate'),
-                bssid: document.getElementById('dispBSSID'),
-                channel: document.getElementById('dispChannel'),
-                sec: document.getElementById('dispSec'),
-                bar: document.getElementById('qualityBar'),
-                qual: document.getElementById('qualityText')
+                global: document.getElementById('globalTarget')
+            },
+            // Map
+            dial: document.getElementById('dialCanvas'),
+            radar: document.getElementById('radarCanvas'),
+            angleInput: document.getElementById('angleInput'),
+            mapTarget: document.getElementById('mapTargetSSID'),
+            sampleInput: document.getElementById('sampleCountInput'),
+            measureBtn: document.getElementById('measureBtn'),
+            progBar: document.getElementById('measureProgress'),
+            statText: document.getElementById('measureStatus'),
+            table: document.getElementById('dataTableBody'),
+            tableContainer: document.getElementById('tableContainer'),
+            tooltip: document.getElementById('radarTooltip'),
+            predResult: document.getElementById('predictionResult'),
+            // Common
+            connect: document.getElementById('connectBtn'),
+            scan: document.getElementById('scanBtn'),
+            log: document.getElementById('logConsole'),
+            p2: { state: document.getElementById('p2State'), rssi: document.getElementById('p2RSSI'), ip: document.getElementById('p2IP') }
+        };
+
+        // --- DRAGGABLE RESIZING LOGIC ---
+        const makeResizable = function(resizer, leftEl, centerEl, rightEl) {
+            let startX, startWidthLeft, startWidthCenter, startWidthRight;
+
+            const onMouseMove = function(e) {
+                const dx = e.clientX - startX;
+                const parentW = leftEl.parentElement.offsetWidth;
+                
+                if (resizer.id === 'resizer-1') {
+                    const newLeftW = ((startWidthLeft + dx) / parentW) * 100;
+                    if (newLeftW > 10 && newLeftW < 50) {
+                        leftEl.style.width = `${newLeftW}%`;
+                        drawDial();
+                        resizeRadar();
+                    }
+                }
+                else if (resizer.id === 'resizer-2') {
+                    const newRightW = ((startWidthRight - dx) / parentW) * 100;
+                    if (newRightW > 10 && newRightW < 50) {
+                        rightEl.style.width = `${newRightW}%`;
+                        resizeRadar();
+                    }
+                }
+            };
+
+            const onMouseUp = function() {
+                document.removeEventListener('mousemove', onMouseMove);
+                document.removeEventListener('mouseup', onMouseUp);
+                resizer.classList.remove('resizing');
+                document.body.style.cursor = '';
+            };
+
+            resizer.addEventListener('mousedown', function(e) {
+                startX = e.clientX;
+                startWidthLeft = leftEl.offsetWidth;
+                startWidthCenter = centerEl.offsetWidth;
+                startWidthRight = rightEl.offsetWidth;
+                resizer.classList.add('resizing');
+                document.body.style.cursor = 'col-resize';
+                document.addEventListener('mousemove', onMouseMove);
+                document.addEventListener('mouseup', onMouseUp);
+            });
+        };
+
+        makeResizable(document.getElementById('resizer-1'), els.panels.left, els.panels.center, els.panels.right);
+        makeResizable(document.getElementById('resizer-2'), els.panels.left, els.panels.center, els.panels.right);
+
+
+        // --- Tab Logic ---
+        window.switchTab = (tab) => {
+            currentTab = tab;
+            els.tabs.live.className = tab === 'live' ? "px-4 py-1 text-xs font-bold rounded bg-indigo-600 text-white" : "px-4 py-1 text-xs font-bold rounded hover:bg-slate-700 text-slate-400";
+            els.tabs.map.className = tab === 'map' ? "px-4 py-1 text-xs font-bold rounded bg-indigo-600 text-white" : "px-4 py-1 text-xs font-bold rounded hover:bg-slate-700 text-slate-400";
+            els.views.live.className = tab === 'live' ? "tab-content active grid grid-cols-12 gap-2 h-full" : "tab-content";
+            els.views.map.className = tab === 'map' ? "tab-content active w-full h-full flex" : "tab-content";
+            
+            if(tab === 'live') {
+                resizeLiveChart();
+                if(liveTarget.ssid && isConnected) sendCommand(`TRACK:${liveTarget.ssid}:${liveTarget.channel}`);
+            }
+            if(tab === 'map') {
+                setTimeout(() => {
+                    drawDial();
+                    resizeRadar();
+                }, 50);
+                if(mapTarget.ssid && isConnected) sendCommand(`TRACK:${mapTarget.ssid}:${mapTarget.channel}`);
+                else if (isConnected) sendCommand("STOP");
             }
         };
 
-        const ctx = els.chart.getContext('2d');
-        resizeChart();
-        window.addEventListener('resize', resizeChart);
+        // --- DIAL CONTROL ---
+        let dialAngle = 0;
+        let isDraggingDial = false;
+        const dialCtx = els.dial.getContext('2d');
 
-        // --- 核心逻辑 ---
+        function drawDial() {
+            // Safety check for hidden elements
+            if (!els.dial.parentElement || els.dial.parentElement.offsetWidth === 0) return;
 
+            const rect = els.dial.parentElement.getBoundingClientRect();
+            els.dial.width = rect.width;
+            els.dial.height = rect.height;
+
+            const ctx = dialCtx;
+            const w = els.dial.width, h = els.dial.height;
+            // Prevent negative radius by ensuring minimum dimensions
+            const cx = w/2, cy = h/2;
+            const r = Math.max(0, Math.min(w,h)/2 - 10);
+
+            ctx.clearRect(0, 0, w, h);
+            ctx.beginPath(); ctx.arc(cx, cy, r, 0, 2*Math.PI);
+            ctx.strokeStyle = "#334155"; ctx.lineWidth = 4; ctx.stroke();
+            
+            for(let i=0; i<360; i+=45) {
+                const rad = (i - 90) * Math.PI / 180;
+                const x1 = cx + (r - 5) * Math.cos(rad);
+                const y1 = cy + (r - 5) * Math.sin(rad);
+                const x2 = cx + r * Math.cos(rad);
+                const y2 = cy + r * Math.sin(rad);
+                ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2);
+                ctx.strokeStyle = "#94a3b8"; ctx.lineWidth = 2; ctx.stroke();
+                
+                if(r > 40) {
+                    const tx = cx + (r - 20) * Math.cos(rad);
+                    const ty = cy + (r - 20) * Math.sin(rad);
+                    ctx.fillStyle = "#64748b"; ctx.font = "10px monospace"; ctx.textAlign = "center"; ctx.textBaseline = "middle";
+                    ctx.fillText(i+"°", tx, ty);
+                }
+            }
+
+            const arrowRad = (dialAngle - 90) * Math.PI / 180;
+            ctx.save(); ctx.translate(cx, cy); ctx.rotate(arrowRad);
+            ctx.beginPath(); ctx.moveTo(r-2, 0); ctx.lineTo(-10, 6); ctx.lineTo(-10, -6);
+            ctx.fillStyle = "#e11d48"; ctx.fill();
+            ctx.beginPath(); ctx.arc(0, 0, 4, 0, 2*Math.PI); ctx.fillStyle = "#fff"; ctx.fill();
+            ctx.restore();
+        }
+
+        function updateDialUI() { drawDial(); els.angleInput.value = dialAngle; }
+
+        function setAngleFromEvent(e) {
+            const rect = els.dial.getBoundingClientRect();
+            const x = e.clientX - rect.left - rect.width/2;
+            const y = e.clientY - rect.top - rect.height/2;
+            let deg = Math.atan2(y, x) * 180 / Math.PI + 90;
+            if (deg < 0) deg += 360;
+            let remainder = deg % 45;
+            if (remainder < 5) deg = deg - remainder;
+            else if (remainder > 40) deg = deg + (45 - remainder);
+            dialAngle = Math.round(deg) % 360;
+            updateDialUI();
+        }
+
+        els.dial.addEventListener('mousedown', (e) => { isDraggingDial = true; setAngleFromEvent(e); });
+        window.addEventListener('mousemove', (e) => { if(isDraggingDial) setAngleFromEvent(e); });
+        window.addEventListener('mouseup', () => { isDraggingDial = false; });
+        els.angleInput.addEventListener('change', () => {
+            let val = parseInt(els.angleInput.value);
+            if(isNaN(val)) val = 0; if(val < 0) val = 0; if(val > 360) val = 360;
+            dialAngle = val % 360; updateDialUI();
+        });
+
+        // --- DATA FEATURES ---
+        window.generateTestData = () => {
+            log("SIM", "Generating simulated 135° signal lobe...");
+            mapData = []; measurementID = 1;
+            const centerAngle = 135;
+            const angles = [0, 45, 90, 135, 180, 225, 270, 315];
+            angles.forEach(ang => {
+                let dist = Math.abs(ang - centerAngle);
+                if (dist > 180) dist = 360 - dist;
+                let rssi = -90 + 50 * Math.exp(-(dist * dist) / (2 * 40 * 40));
+                rssi += (Math.random() - 0.5) * 5;
+                rssi = Math.round(rssi);
+                mapData.push({ id: measurementID++, angle: ang, rssi: rssi, rawSamples: [rssi, rssi-1, rssi+1] });
+            });
+            updateTable(); drawRadar(); log("SIM", "Test data loaded.");
+        };
+
+        window.importCSV = (input) => {
+            const file = input.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const text = e.target.result;
+                const lines = text.split('\n');
+                let importedCount = 0;
+                mapData = []; measurementID = 1;
+                for(let i = 1; i < lines.length; i++) {
+                    const line = lines[i].trim();
+                    if (!line) continue;
+                    const parts = line.split(',');
+                    if (parts.length >= 3) {
+                        const rec = { id: measurementID++, angle: parseInt(parts[1]), rssi: parseInt(parts[2]), rawSamples: [] };
+                        mapData.push(rec);
+                        importedCount++;
+                    }
+                }
+                updateTable(); drawRadar(); log("SYS", `Imported ${importedCount} records.`);
+            };
+            reader.readAsText(file);
+            input.value = '';
+        };
+
+        // --- MEASUREMENT LOGIC ---
+        els.measureBtn.addEventListener('click', () => {
+            if(!isConnected) { log("ERR", "Connect device first."); return; }
+            if(!mapTarget.ssid) { log("ERR", "Select target first."); return; }
+            isMeasuring = true;
+            currentSamples = [];
+            requiredSamples = parseInt(els.sampleInput.value) || 2;
+            els.measureBtn.disabled = true; els.measureBtn.innerText = "SAMPLING...";
+            els.statText.innerText = `0 / ${requiredSamples}`;
+            els.progBar.style.width = "0%";
+            sendCommand(`TRACK:${mapTarget.ssid}:${mapTarget.channel}`);
+        });
+
+        function handleMapData(rssi) {
+            if(!isMeasuring) return;
+            if(rssi <= -100) return;
+            currentSamples.push(rssi);
+            const pct = (currentSamples.length / requiredSamples) * 100;
+            els.progBar.style.width = pct + "%";
+            els.statText.innerText = `${currentSamples.length}/${requiredSamples}`;
+            if(currentSamples.length >= requiredSamples) finishMeasurement();
+        }
+
+        function finishMeasurement() {
+            isMeasuring = false;
+            els.measureBtn.disabled = false; els.measureBtn.innerText = "START MEASUREMENT";
+            els.statText.innerText = "Done.";
+            let sum = currentSamples.reduce((a, b) => a + b, 0);
+            let avg = Math.round(sum / currentSamples.length);
+            const record = { id: measurementID++, angle: dialAngle, rssi: avg, rawSamples: [...currentSamples] };
+            mapData.push(record);
+            updateTable();
+            drawRadar();
+            log("MAP", `Saved: ${avg}dBm @ ${dialAngle}°`);
+        }
+
+        // --- PREDICTION ---
+        window.calculateSource = () => {
+            if(mapData.length < 3) { els.predResult.innerHTML = "<span class='text-red-500'>NEED >3 POINTS</span>"; return; }
+            const validPoints = mapData.filter(d => d.rssi > -90);
+            if(validPoints.length === 0) { els.predResult.innerHTML = "<span class='text-red-500'>SIGNAL WEAK</span>"; return; }
+            let sumSin = 0, sumCos = 0;
+            validPoints.forEach(d => {
+                let weight = Math.pow(10, (d.rssi + 100) / 20); 
+                let rad = (d.angle - 90) * Math.PI / 180;
+                sumSin += Math.sin(rad) * weight; sumCos += Math.cos(rad) * weight;
+            });
+            let avgRad = Math.atan2(sumSin, sumCos);
+            let predictedDeg = Math.round((avgRad * 180 / Math.PI) + 90);
+            if(predictedDeg < 0) predictedDeg += 360;
+            predictedAngle = predictedDeg;
+            els.predResult.innerHTML = `<span class='text-white'>EST:</span> <span class='text-yellow-400 font-bold'>${predictedDeg}°</span>`;
+            drawRadar();
+        };
+
+        // --- DATA MANAGEMENT ---
+        window.deleteMeasurement = (id) => {
+            mapData = mapData.filter(d => d.id !== id);
+            updateTable(); drawRadar(); hoveredPointId = null; els.tooltip.classList.add('hidden');
+        };
+        window.toggleSubRow = (id) => {
+            const subRow = document.getElementById(`subrow-${id}`);
+            const btn = document.getElementById(`btn-expand-${id}`);
+            if(subRow.classList.contains('hidden')) { subRow.classList.remove('hidden'); btn.innerText = "[-]"; } 
+            else { subRow.classList.add('hidden'); btn.innerText = "[+]"; }
+        };
+
+        function updateTable() {
+            els.table.innerHTML = "";
+            [...mapData].reverse().forEach(d => {
+                const row = document.createElement('tr');
+                row.id = `row-${d.id}`; row.className = "main-row border-b border-slate-800";
+                row.innerHTML = `
+                    <td class="text-center"><button id="btn-expand-${d.id}" onclick="event.stopPropagation(); toggleSubRow(${d.id})" class="text-sky-500 font-mono text-[10px] hover:text-white">[+]</button></td>
+                    <td class="font-bold text-yellow-400">${d.angle}°</td>
+                    <td class="font-mono text-sky-400 font-bold">${d.rssi}</td>
+                    <td class="text-xs text-slate-400 text-center">${d.rawSamples.length}</td>
+                    <td class="text-center"><button onclick="event.stopPropagation(); deleteMeasurement(${d.id})" class="text-[10px] text-red-500 hover:text-red-300 font-bold px-1 rounded hover:bg-slate-800">✕</button></td>
+                `;
+                const subRow = document.createElement('tr');
+                subRow.id = `subrow-${d.id}`; subRow.className = "sub-row hidden";
+                subRow.innerHTML = `<td colspan="5" class="p-1 bg-slate-900/50 inset-shadow"><div class="flex flex-wrap gap-1 text-[9px] font-mono text-slate-500"><span>RAW:</span>${d.rawSamples.map(v => `<span class="bg-slate-800 px-1 rounded text-slate-300">${v}</span>`).join('')}</div></td>`;
+                row.addEventListener('mouseenter', () => { hoveredPointId = d.id; drawRadar(); });
+                row.addEventListener('mouseleave', () => { hoveredPointId = null; drawRadar(); });
+                els.table.appendChild(row); els.table.appendChild(subRow);
+            });
+        }
+
+        // --- RADAR CHART (Adaptive & Resizable) ---
+        const radarCtx = els.radar.getContext('2d');
+        const mapR = (rssi, maxR) => { let r = (rssi + 95) / 70; if(r<0) r=0; if(r>1) r=1; return r * maxR; };
+
+        function resizeRadar() {
+            const container = els.radar.parentElement;
+            if (container.offsetWidth < 1 || container.offsetHeight < 1) return;
+            els.radar.width = container.offsetWidth - 16;
+            els.radar.height = container.offsetHeight - 16;
+            drawRadar();
+        }
+
+        function drawRadar() {
+            const ctx = radarCtx;
+            const w = els.radar.width, h = els.radar.height;
+            if (w < 1 || h < 1) return; // Prevent 0 size drawing
+            const cx = w/2, cy = h/2, maxR = Math.max(0, Math.min(w,h)/2 - 15);
+            radarPoints = [];
+
+            ctx.fillStyle = "#000"; ctx.fillRect(0, 0, w, h);
+            ctx.strokeStyle = "#1e293b"; ctx.lineWidth = 1;
+            [0.33, 0.66, 1].forEach(s => { ctx.beginPath(); ctx.arc(cx, cy, maxR*s, 0, 2*Math.PI); ctx.stroke(); });
+            ctx.beginPath();
+            for(let i=0; i<360; i+=45) {
+                const rad = (i - 90) * Math.PI / 180;
+                ctx.moveTo(cx, cy); ctx.lineTo(cx + maxR * Math.cos(rad), cy + maxR * Math.sin(rad));
+            }
+            ctx.stroke();
+
+            if(predictedAngle !== null) {
+                const pRad = (predictedAngle - 90) * Math.PI / 180;
+                ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(cx + maxR * Math.cos(pRad), cy + maxR * Math.sin(pRad));
+                ctx.strokeStyle = "#fbbf24"; ctx.lineWidth = 2; ctx.setLineDash([5, 5]); ctx.stroke(); ctx.setLineDash([]);
+                ctx.beginPath(); ctx.arc(cx + maxR * Math.cos(pRad), cy + maxR * Math.sin(pRad), 6, 0, 2*Math.PI); ctx.fillStyle = "#fbbf24"; ctx.fill();
+            }
+
+            if(mapData.length === 0) return;
+
+            let uniqueAngles = {};
+            mapData.forEach(d => { if(!uniqueAngles[d.angle]) uniqueAngles[d.angle] = []; uniqueAngles[d.angle].push(d.rssi); });
+            let sortedAngles = Object.keys(uniqueAngles).map(Number).sort((a,b)=>a-b);
+
+            ctx.beginPath();
+            sortedAngles.forEach((ang, i) => {
+                let avgRssi = uniqueAngles[ang].reduce((a,b)=>a+b,0) / uniqueAngles[ang].length;
+                let r = mapR(avgRssi, maxR);
+                let rad = (ang - 90) * Math.PI / 180;
+                let x = cx + r * Math.cos(rad); let y = cy + r * Math.sin(rad);
+                if(i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
+            });
+            ctx.closePath();
+            ctx.fillStyle = "rgba(56, 189, 248, 0.2)"; ctx.fill(); ctx.strokeStyle = "#38bdf8"; ctx.lineWidth = 2; ctx.stroke();
+
+            mapData.forEach(d => {
+                let r = mapR(d.rssi, maxR);
+                let rad = (d.angle - 90) * Math.PI / 180;
+                let x = cx + r * Math.cos(rad); let y = cy + r * Math.sin(rad);
+                radarPoints.push({ x, y, id: d.id, angle: d.angle, rssi: d.rssi, samples: d.rawSamples.length });
+                const isHovered = (d.id === hoveredPointId);
+                ctx.beginPath(); ctx.arc(x, y, isHovered ? 6 : 4, 0, 2*Math.PI);
+                ctx.fillStyle = isHovered ? "#ffff00" : "#fff"; ctx.fill();
+                if(isHovered) { ctx.strokeStyle = "#fff"; ctx.lineWidth = 2; ctx.stroke(); }
+            });
+        }
+
+        els.radar.addEventListener('mousemove', (e) => {
+            const rect = els.radar.getBoundingClientRect();
+            const mouseX = e.clientX - rect.left;
+            const mouseY = e.clientY - rect.top;
+            let hitId = null, hitPoint = null;
+            for(let p of radarPoints) {
+                if(Math.sqrt(Math.pow(mouseX - p.x, 2) + Math.pow(mouseY - p.y, 2)) < 10) { hitId = p.id; hitPoint = p; break; }
+            }
+            if(hitId !== hoveredPointId) { hoveredPointId = hitId; drawRadar(); highlightRow(hitId); }
+            if(hitPoint) {
+                els.tooltip.style.left = (e.clientX + 10) + 'px'; els.tooltip.style.top = (e.clientY + 10) + 'px';
+                els.tooltip.innerHTML = `<div class='font-bold text-yellow-400'>#${hitPoint.id}</div><div>${hitPoint.angle}° | ${hitPoint.rssi}dBm</div>`;
+                els.tooltip.classList.remove('hidden'); els.radar.style.cursor = 'pointer';
+            } else { els.tooltip.classList.add('hidden'); els.radar.style.cursor = 'crosshair'; }
+        });
+        els.radar.addEventListener('mouseleave', () => { if(hoveredPointId!==null) { hoveredPointId=null; drawRadar(); highlightRow(null); } els.tooltip.classList.add('hidden'); });
+
+        function highlightRow(id) {
+            document.querySelectorAll('tr.active-row').forEach(r => r.classList.remove('active-row'));
+            if(id) { const row = document.getElementById(`row-${id}`); if(row) { row.classList.add('active-row'); row.scrollIntoView({ behavior: 'smooth', block: 'center' }); } }
+        }
+
+        window.clearMapData = () => { mapData = []; measurementID=1; predictedAngle=null; updateTable(); drawRadar(); els.predResult.innerText="--"; };
+        window.exportCSV = () => {
+            let csv = "ID,Angle,RSSI,Samples\n" + mapData.map(d => `${d.id},${d.angle},${d.rssi},${d.rawSamples.length}`).join("\n");
+            let blob = new Blob([csv], { type: 'text/csv' });
+            let url = window.URL.createObjectURL(blob);
+            let a = document.createElement('a'); a.href = url; a.download = "radar_data.csv"; a.click();
+        };
+
+        // --- LIVE CHART ---
+        const liveCtx = els.liveChart.getContext('2d');
+        function drawLiveChart() {
+            if(currentTab !== 'live') return;
+            const w = els.liveChart.width, h = els.liveChart.height;
+            // Add dimension check
+            if (w < 1 || h < 1) return;
+            liveCtx.fillStyle = "#000"; liveCtx.fillRect(0, 0, w, h);
+            liveCtx.strokeStyle = "#1e293b"; liveCtx.lineWidth = 1; liveCtx.beginPath();
+            for (let y = 0; y < h; y += 40) { liveCtx.moveTo(0, y); liveCtx.lineTo(w, y); }
+            liveCtx.stroke();
+            liveCtx.strokeStyle = "#38bdf8"; liveCtx.lineWidth = 2; liveCtx.beginPath();
+            const step = w / (liveChartData.length - 1);
+            for (let i = 0; i < liveChartData.length; i++) {
+                let val = liveChartData[i]; if(val<-120) val=-120;
+                const y = h - ((val + 120) / 100 * h);
+                if (i === 0) liveCtx.moveTo(0, y); else liveCtx.lineTo(i * step, y);
+            }
+            liveCtx.stroke();
+        }
+        function resizeLiveChart() {
+            if (els.liveChart.parentElement.offsetWidth < 1) return;
+            els.liveChart.width = els.liveChart.parentElement.offsetWidth;
+            els.liveChart.height = els.liveChart.parentElement.offsetHeight;
+        }
+        window.addEventListener('resize', () => { resizeLiveChart(); if(currentTab==='map') { drawDial(); resizeRadar(); } });
+
+        // --- SERIAL ---
         els.connect.addEventListener('click', async () => {
             if ("serial" in navigator) {
                 try {
                     port = await navigator.serial.requestPort();
                     await port.open({ baudRate: 115200 });
-                    
-                    const textDecoder = new TextDecoderStream();
-                    port.readable.pipeTo(textDecoder.writable);
+                    const textDecoder = new TextDecoderStream(); port.readable.pipeTo(textDecoder.writable);
                     reader = textDecoder.readable.getReader();
-
-                    const textEncoder = new TextEncoderStream();
-                    textEncoder.readable.pipeTo(port.writable);
+                    const textEncoder = new TextEncoderStream(); textEncoder.readable.pipeTo(port.writable);
                     writer = textEncoder.writable.getWriter();
-
                     isConnected = true;
-                    stopSimulation();
-                    log("SYS", "SERIAL LINK ESTABLISHED");
-                    els.connect.innerText = "LINK ACTIVE";
-                    els.connect.disabled = true;
-                    
+                    log("SYS", "CONNECTED");
+                    els.connect.innerText = "LINKED"; els.connect.disabled = true;
                     readLoop();
-                    sendCommand("SCAN"); // Auto scan on connect
-
-                } catch (err) {
-                    log("ERR", err.message);
-                }
-            } else {
-                alert("Browser not supported. Use Chrome/Edge.");
-            }
+                    sendCommand("SCAN");
+                } catch (err) { log("ERR", err.message); }
+            } else { alert("Browser not supported."); }
         });
 
-        els.scan.addEventListener('click', () => {
-            if (isConnected) sendCommand("SCAN");
-            else if (isSimulating) simulateScan();
-        });
-
-        els.sim.addEventListener('click', () => {
-            if (isSimulating) stopSimulation();
-            else startSimulation();
-        });
-
-        // --- 数据处理 ---
+        els.scan.addEventListener('click', () => sendCommand("SCAN"));
 
         async function readLoop() {
             let buffer = "";
@@ -229,208 +739,67 @@
                     buffer = lines.pop(); 
                     for (let line of lines) processLine(line.trim());
                 }
-            } catch (err) {
-                log("ERR", "LINK LOST: " + err);
-                isConnected = false;
-            }
+            } catch (err) { log("ERR", "DISCONNECTED"); isConnected = false; }
         }
 
         function processLine(line) {
             if (!line) return;
-
-            // 计算刷新率
-            packetCount++;
-            const now = performance.now();
-            if (now - lastRateCheck > 1000) {
-                els.disp.rate.innerText = packetCount; // Update Hz display
-                packetCount = 0;
-                lastRateCheck = now;
-            }
-
-            if (line.startsWith("LOG:")) {
-                const parts = line.split(":");
-                log(parts[1], parts.slice(2).join(":"));
-            }
-            else if (line.startsWith("LIST:")) {
-                // LIST:SSID,RSSI,CHANNEL,BSSID,SECURITY
-                const parts = line.substring(5).split(",");
-                if (parts.length >= 5) {
-                    addNetwork(parts[0], parts[1], parts[2], parts[3], parts[4]);
-                }
-            }
-            else if (line.startsWith("STATUS:SCAN_START")) {
-                els.list.innerHTML = "";
-                log("SYS", "SCANNING AIRWAVES...");
-            }
-            else if (line.startsWith("DATA:")) {
-                // DATA:RSSI,CHANNEL,BSSID
+            if (line.startsWith("DATA:")) {
                 const parts = line.substring(5).split(",");
                 const rssi = parseInt(parts[0]);
-                
-                updateDashboard(rssi, parts[1], parts[2]);
+                if (currentTab === 'live') {
+                    els.disp.rssi.innerText = rssi;
+                    liveChartData.push(rssi); liveChartData.shift(); drawLiveChart();
+                } else if (currentTab === 'map') {
+                    handleMapData(rssi);
+                }
             }
+            else if (line.startsWith("LIST:")) {
+                const parts = line.substring(5).split(",");
+                if (parts.length >= 5) addNetwork(parts[0], parts[1], parts[2], parts[3], parts[4]);
+            }
+            else if (line.startsWith("STATUS:SCAN_START")) { els.list.innerHTML = ""; log("SYS", "SCANNING..."); }
+            else if (line.startsWith("STATUS:DEVICE:")) { updateDeviceStatus(line); }
+            else if (line.startsWith("LOG:")) { log("DEV", line.substring(4)); }
         }
 
+        async function sendCommand(cmd) { if (writer) await writer.write(cmd + "\n"); }
+        
         function addNetwork(ssid, rssi, channel, bssid, sec) {
-            if (!ssid) return;
-            
             const div = document.createElement('div');
-            div.className = "list-item p-3 cursor-pointer text-xs border-b border-slate-800";
+            div.className = "list-item p-3 border-b border-slate-800 cursor-pointer group";
             div.innerHTML = `
-                <div class="flex justify-between mb-1">
-                    <span class="font-bold text-slate-200 truncate w-2/3">${ssid}</span>
-                    <span class="text-sky-400 font-mono">${rssi} dBm</span>
-                </div>
-                <div class="flex justify-between text-[10px] text-slate-500 font-mono">
-                    <span>CH:${channel}</span>
-                    <span>${bssid}</span>
-                    <span>${sec}</span>
-                </div>
-            `;
-            
+                <div class="flex justify-between mb-1"><span class="font-bold text-slate-200 truncate w-32">${ssid}</span><span class="text-sky-400 text-xs">${rssi}dBm</span></div>
+                <div class="text-[10px] text-slate-500 font-mono">CH:${channel}</div>`;
             div.onclick = () => {
-                // UI Selection
                 document.querySelectorAll('.list-item').forEach(e => e.classList.remove('active'));
                 div.classList.add('active');
-                
-                // Set Target
-                currentTarget = { ssid, channel };
-                els.disp.ssid.innerText = ssid;
-                els.disp.status.innerText = "TRACKING LOCKED // FAST SCAN";
-                els.disp.status.className = "text-xs text-green-400 animate-pulse";
-                
-                // Clear Chart
-                chartData.fill(-120);
-                
-                // Send Command: TRACK:SSID:CHANNEL (关键：把信道发回去加速)
-                if (isConnected) {
-                    sendCommand(`TRACK:${ssid}:${channel}`);
-                } else if (isSimulating) {
-                    log("SIM", `Locking onto ${ssid} (CH ${channel})`);
-                    clearInterval(simInterval);
-                    simInterval = setInterval(simulateTracking, 100); // 10Hz simulation
-                }
+                liveTarget = { ssid, channel }; mapTarget = { ssid, channel };
+                els.disp.global.innerText = ssid; els.mapTarget.innerText = ssid;
+                liveChartData.fill(-120);
+                if(isConnected) sendCommand(`TRACK:${ssid}:${channel}`);
             };
-            
             els.list.appendChild(div);
         }
 
-        function updateDashboard(rssi, channel, bssid) {
-            // Update Intel
-            els.disp.rssi.innerText = rssi;
-            if (channel) els.disp.channel.innerText = "CH " + channel;
-            if (bssid) els.disp.bssid.innerText = bssid;
-
-            // Quality Bar
-            // -90 is 0%, -30 is 100%
-            let qual = Math.max(0, Math.min(100, (rssi + 95) * 1.6));
-            els.disp.bar.style.width = qual + "%";
-            els.disp.qual.innerText = Math.floor(qual) + "%";
-            
-            // Color coding
-            if (rssi > -50) els.disp.bar.className = "h-full bg-green-500 w-0 transition-all duration-75";
-            else if (rssi > -70) els.disp.bar.className = "h-full bg-yellow-400 w-0 transition-all duration-75";
-            else els.disp.bar.className = "h-full bg-red-500 w-0 transition-all duration-75";
-
-            // Chart update
-            chartData.push(rssi);
-            chartData.shift();
-            drawChart();
-        }
-
-        // --- 绘图 ---
-        function drawChart() {
-            const w = els.chart.width;
-            const h = els.chart.height;
-            
-            ctx.fillStyle = "#000";
-            ctx.fillRect(0, 0, w, h);
-            
-            // Grid
-            ctx.strokeStyle = "#1e293b";
-            ctx.lineWidth = 1;
-            ctx.beginPath();
-            for (let y = 0; y < h; y += 40) { ctx.moveTo(0, y); ctx.lineTo(w, y); }
-            for (let x = 0; x < w; x += 40) { ctx.moveTo(x, 0); ctx.lineTo(x, h); }
-            ctx.stroke();
-
-            // Waveform
-            ctx.strokeStyle = "#38bdf8";
-            ctx.lineWidth = 2;
-            ctx.beginPath();
-            
-            const step = w / (chartData.length - 1);
-            for (let i = 0; i < chartData.length; i++) {
-                // Map -120..-20 to h..0
-                let val = chartData[i];
-                if (val < -120) val = -120; 
-                const y = h - ((val + 120) / 100 * h);
-                
-                if (i === 0) ctx.moveTo(0, y);
-                else ctx.lineTo(i * step, y);
+        function updateDeviceStatus(line) {
+            if (line.startsWith("STATUS:DEVICE:CONNECTED,")) {
+                const parts = line.substring(24).split(",");
+                if (parts.length >= 6) {
+                    els.p2.state.innerText = "ONLINE"; els.p2.state.className="text-green-500 font-bold ml-2";
+                    els.p2.rssi.innerText = parts[2] + " dBm"; els.p2.ip.innerText = parts[1];
+                }
             }
-            ctx.stroke();
-
-            // Gradient Fill
-            ctx.lineTo(w, h);
-            ctx.lineTo(0, h);
-            const grad = ctx.createLinearGradient(0, 0, 0, h);
-            grad.addColorStop(0, "rgba(56, 189, 248, 0.2)");
-            grad.addColorStop(1, "rgba(56, 189, 248, 0)");
-            ctx.fillStyle = grad;
-            ctx.fill();
-        }
-
-        function resizeChart() {
-            els.chart.width = els.chart.parentElement.offsetWidth;
-            els.chart.height = els.chart.parentElement.offsetHeight;
-        }
-
-        // --- 工具函数 ---
-        async function sendCommand(cmd) {
-            if (writer) await writer.write(cmd + "\n");
         }
 
         function log(level, msg) {
-            const d = document.createElement('div');
-            d.innerText = `[${level}] ${msg}`;
-            if (level === "ERR") d.style.color = "#f87171";
-            if (level === "SYS") d.style.color = "#94a3b8";
-            els.log.appendChild(d);
-            els.log.scrollTop = els.log.scrollHeight;
+            const d = document.createElement('div'); d.innerText = `[${level}] ${msg}`;
+            if(level==="ERR") d.style.color="#f87171";
+            els.log.appendChild(d); els.log.scrollTop = els.log.scrollHeight;
         }
-
-        // --- 模拟逻辑 ---
-        function startSimulation() {
-            isSimulating = true;
-            els.sim.innerText = "STOP SIM";
-            els.sim.className = "btn px-4 py-1 text-xs text-green-400 border-green-900";
-            simulateScan();
-        }
-        function stopSimulation() {
-            isSimulating = false;
-            clearInterval(simInterval);
-            els.sim.innerText = "DEMO_SIM";
-            els.sim.className = "btn px-4 py-1 text-xs text-slate-400";
-        }
-        function simulateScan() {
-            els.list.innerHTML = "";
-            log("SIM", "Generating fake networks...");
-            setTimeout(() => {
-                addNetwork("Target_Alpha", -55, 6, "AA:BB:CC:11:22:33", "WPA2");
-                addNetwork("Neighbor_Net", -82, 11, "11:22:33:44:55:66", "WPA2");
-                addNetwork("Coffee_Free", -65, 1, "DD:EE:FF:00:11:22", "OPEN");
-            }, 500);
-        }
-        let simAngle = 0;
-        function simulateTracking() {
-            simAngle += 0.2;
-            const base = -50;
-            const noise = (Math.random() - 0.5) * 5;
-            const val = base + Math.sin(simAngle) * 30 + noise;
-            updateDashboard(Math.floor(val), currentTarget.channel, "AA:BB:CC:11:22:33");
-        }
-
+        
+        // Initial setup
+        setTimeout(() => { drawDial(); resizeLiveChart(); if(currentTab==='map') resizeRadar(); }, 100);
     </script>
 </body>
 </html>

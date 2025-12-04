@@ -1,17 +1,16 @@
 /*
- * Project: Web_Serial_WiFi_Tester_v3_Fixed
+ * Project: Web_Serial_Radar_v10_Mapping_Engine
  * Hardware: Particle Photon 2
- * Description: Fixed compilation errors (Removed unsupported WiFiScanParams)
+ * Description: Stable scanning backend for Semi-Automated Mapping WebUI.
  */
 
 #include "Particle.h"
 
-// Device OS 6.x 默认已开启系统线程，无需再显式调用 SYSTEM_THREAD(ENABLED);
-
 // --- 函数声明 ---
 void performFullScan();
-void performFastTracking();
+void performStableTracking();
 void sendLog(String level, String msg);
+void reportDeviceStatus();
 String macToString(const uint8_t* mac);
 String securityToString(int security);
 
@@ -27,19 +26,20 @@ State currentState = STATE_IDLE;
 // 追踪目标信息
 String targetSSID = "";
 int targetChannel = 0;
-String targetBSSID = "";
 
 WiFiAccessPoint aps[50];
 unsigned long lastUpdate = 0;
+unsigned long lastStatusReport = 0; 
 
 void setup() {
   Serial.begin(115200);
   WiFi.selectAntenna(ANT_EXTERNAL);
   delay(2000);
-  sendLog("INFO", "System Booted. Standard Mode Ready.");
+  sendLog("INFO", "System Booted. Radar Engine v10.");
 }
 
 void loop() {
+  // 1. 处理串口指令
   if (Serial.available() > 0) {
     String cmd = Serial.readStringUntil('\n');
     cmd.trim();
@@ -49,22 +49,17 @@ void loop() {
       currentState = STATE_SCANNING;
     } 
     else if (cmd.startsWith("TRACK:")) {
-      // 解析 TRACK:SSID:CHANNEL
       int firstColon = cmd.indexOf(':');
       int lastColon = cmd.lastIndexOf(':');
-      
       if (lastColon > firstColon) {
         targetSSID = cmd.substring(firstColon + 1, lastColon);
         targetChannel = cmd.substring(lastColon + 1).toInt();
         sendLog("INFO", "TARGET LOCKED: [" + targetSSID + "]");
         currentState = STATE_TRACKING;
-      } else {
-        // 兼容旧指令
-        targetSSID = cmd.substring(6);
-        targetChannel = 0; 
-        sendLog("WARN", "Legacy TRACK command.");
-        currentState = STATE_TRACKING;
       }
+    }
+    else if (cmd == "GET_STATUS") {
+      reportDeviceStatus();
     }
     else if (cmd == "STOP") {
       sendLog("INFO", "Command: STOP");
@@ -72,6 +67,7 @@ void loop() {
     }
   }
 
+  // 2. 状态机逻辑
   switch (currentState) {
     case STATE_SCANNING:
       performFullScan();
@@ -79,10 +75,9 @@ void loop() {
       break;
 
     case STATE_TRACKING:
-      // P2 目前不支持用户层信道锁定，必须使用标准扫描
-      // 这里的间隔不宜过短，因为 WiFi.scan 是阻塞的
-      if (millis() - lastUpdate > 100) { 
-        performFastTracking();
+      // 保持 200ms 的最小间隔，给 WiFi 模组喘息时间
+      if (millis() - lastUpdate > 200) { 
+        performStableTracking();
         lastUpdate = millis();
       }
       break;
@@ -90,26 +85,56 @@ void loop() {
     case STATE_IDLE:
       break;
   }
+
+  // 3. 定时报告设备状态 (3秒一次)
+  if (millis() - lastStatusReport > 3000) {
+    reportDeviceStatus();
+    lastStatusReport = millis();
+  }
+}
+
+// 报告设备状态 (使用逗号分隔，避免 MAC 地址冲突)
+void reportDeviceStatus() {
+  if (WiFi.ready()) {
+    Serial.print("STATUS:DEVICE:CONNECTED,"); 
+    Serial.print(WiFi.SSID());
+    Serial.print(",");
+    Serial.print(WiFi.localIP());
+    Serial.print(",");
+    
+    // RSSI 估算转换 (0-100% -> -90dBm to -30dBm)
+    WiFiSignal sig = WiFi.RSSI();
+    int rssi = (int)((sig.getStrength() * 0.6) - 90);
+    Serial.print(rssi);
+    Serial.print(",");
+    
+    Serial.print(WiFi.gatewayIP());
+    Serial.print(",");
+    Serial.print(WiFi.subnetMask());
+    Serial.print(",");
+    
+    uint8_t mac[6];
+    WiFi.macAddress(mac);
+    Serial.println(macToString(mac)); 
+    
+  } else {
+    Serial.println("STATUS:DEVICE:DISCONNECTED");
+  }
 }
 
 void sendLog(String level, String msg) {
   Serial.print("LOG:"); Serial.print(level); Serial.print(":"); Serial.println(msg);
 }
 
-// 全信道扫描
 void performFullScan() {
   Serial.println("STATUS:SCAN_START");
-  sendLog("INFO", "Scanning all channels...");
-  
+  sendLog("INFO", "Scanning spectrum...");
   int found = WiFi.scan(aps, 50);
-  
   if (found < 0) {
-    sendLog("ERROR", "Scan failed: " + String(found));
+    sendLog("ERROR", "Scan err: " + String(found));
     Serial.println("STATUS:SCAN_END");
     return;
   }
-
-  sendLog("INFO", "Scan done. Found " + String(found) + " APs.");
   
   for (int i = 0; i < found; i++) {
     // 协议: LIST:SSID,RSSI,CHANNEL,BSSID,SECURITY
@@ -127,15 +152,12 @@ void performFullScan() {
   Serial.println("STATUS:SCAN_END");
 }
 
-// 追踪模式 (已修复编译错误)
-void performFastTracking() {
-  // 修正：Photon 2 目前不支持 WiFiScanParams 结构体，必须回退到标准扫描
-  // 虽然不能锁定信道加速，但依然可以正常获取 RSSI 数据
+void performStableTracking() {
+  // 核心追踪逻辑：全信道扫描
   int found = WiFi.scan(aps, 50);
   
   int max_rssi = -120;
   bool found_target = false;
-  
   String currentBSSID = "";
   int currentChannel = 0;
 
@@ -159,11 +181,12 @@ void performFastTracking() {
     Serial.print(",");
     Serial.println(currentBSSID);
   } else {
-    Serial.println("DATA:-120,0,LOST");
+    // 没扫到 (可能信号太弱或信标帧丢失)
+    // 仍然发送心跳，方便前端判断连接状态
+    Serial.println("DATA:-120,0,SCANNING...");
   }
 }
 
-// 辅助：格式化 MAC 地址
 String macToString(const uint8_t* mac) {
   char buf[20];
   snprintf(buf, sizeof(buf), "%02X:%02X:%02X:%02X:%02X:%02X", 
@@ -171,16 +194,13 @@ String macToString(const uint8_t* mac) {
   return String(buf);
 }
 
-// 辅助：格式化加密类型
 String securityToString(int security) {
   switch (security) {
     case WLAN_SEC_UNSEC: return "OPEN";
     case WLAN_SEC_WEP: return "WEP";
     case WLAN_SEC_WPA: return "WPA";
     case WLAN_SEC_WPA2: return "WPA2";
-    case WLAN_SEC_WPA_ENTERPRISE: return "WPA-Ent";
-    case WLAN_SEC_WPA2_ENTERPRISE: return "WPA2-Ent";
     case WLAN_SEC_WPA3: return "WPA3";
-    default: return "UNKNOWN";
+    default: return "SECURE";
   }
 }
