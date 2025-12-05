@@ -93,7 +93,7 @@
         body.light-mode #logConsole .text-slate-600 { color: #64748b !important; }
     </style>
 </head>
-<body class="p-2 select-none">
+<body class="p-2">
 
     <!-- Header -->
     <header class="shrink-0 mb-2">
@@ -109,6 +109,7 @@
             <div class="flex gap-1 bg-slate-900 p-1 rounded border border-slate-700">
                 <button onclick="switchTab('live')" id="tab-live" class="px-4 py-1 text-xs font-bold rounded bg-indigo-600 text-white">LIVE MONITOR</button>
                 <button onclick="switchTab('map')" id="tab-map" class="px-4 py-1 text-xs font-bold rounded hover:bg-slate-700 text-slate-400">MANUAL MAPPING</button>
+                <button onclick="switchTab('wifi')" id="tab-wifi" class="px-4 py-1 text-xs font-bold rounded hover:bg-slate-700 text-slate-400">WIFI CONFIG</button>
             </div>
 
             <div class="flex gap-2">
@@ -252,6 +253,45 @@
                     </div>
                 </div>
             </div>
+
+            <!-- VIEW 3: WIFI CONFIG -->
+            <div id="view-wifi" class="tab-content gap-2 w-full h-full p-1">
+                <div class="w-1/4 min-w-[200px] panel overflow-hidden flex flex-col h-full">
+                    <div class="p-2 border-b border-slate-800 flex justify-between items-center bg-slate-900/50 shrink-0">
+                        <span class="text-xs font-bold text-slate-400">WIFI NETWORKS</span>
+                        <button id="scanBtnWifi" onclick="sendCommand('SCAN')" class="text-xs text-sky-500 hover:text-white disabled:opacity-50">[ REFRESH ]</button>
+                    </div>
+                    <div id="wifiList" class="flex-1 overflow-y-auto custom-scroll p-0"><div class="p-4 text-center text-xs text-slate-600 font-mono">> WAITING...</div></div>
+                </div>
+                <div class="flex-1 panel relative flex flex-col items-center justify-center p-8 gap-4">
+                    <div class="w-full max-w-md bg-slate-900 border border-slate-700 rounded p-4 flex flex-col gap-4">
+                        <div class="border-b border-slate-700 pb-2 mb-2">
+                            <h2 class="text-lg font-bold text-white">Join Network</h2>
+                            <p class="text-xs text-slate-400">Configure credentials for Photon 2</p>
+                        </div>
+
+                        <div>
+                            <label class="text-[10px] text-slate-500 uppercase font-bold tracking-wider mb-1 block">Selected SSID</label>
+                            <div id="wifiSelectedSSID" class="text-sm font-bold text-sky-400 bg-slate-800 p-2 rounded border border-slate-700">--</div>
+                        </div>
+
+                        <div>
+                            <label class="text-[10px] text-slate-500 uppercase font-bold tracking-wider mb-1 block">Security</label>
+                            <div id="wifiSelectedSec" class="text-xs text-slate-300 font-mono">--</div>
+                        </div>
+
+                        <div>
+                            <label class="text-[10px] text-slate-500 uppercase font-bold tracking-wider mb-1 block">Password</label>
+                            <input type="password" id="wifiPassInput" class="dark-input w-full text-sm" placeholder="Enter password...">
+                        </div>
+
+                        <button id="wifiConnectBtn" onclick="connectWiFi()" class="btn py-2 font-bold text-green-400 border-green-900 hover:bg-green-900/30 mt-2">CONNECT</button>
+                    </div>
+                    <div class="text-[10px] text-slate-500 max-w-md text-center">
+                        Note: Device may need to restart to apply new network settings. Please observe the device LED status.
+                    </div>
+                </div>
+            </div>
         </div>
 
         <div class="resizer-h" id="resizer-terminal"></div>
@@ -286,10 +326,14 @@
 
         // --- DOM Elements ---
         const els = {
-            tabs: { live: document.getElementById('tab-live'), map: document.getElementById('tab-map') },
-            views: { live: document.getElementById('view-live'), map: document.getElementById('view-map') },
+            tabs: { live: document.getElementById('tab-live'), map: document.getElementById('tab-map'), wifi: document.getElementById('tab-wifi') },
+            views: { live: document.getElementById('view-live'), map: document.getElementById('view-map'), wifi: document.getElementById('view-wifi') },
             panels: { left: document.getElementById('panel-left'), center: document.getElementById('panel-center'), right: document.getElementById('panel-right'), terminal: document.getElementById('panel-terminal') },
             list: document.getElementById('networkList'),
+            wifiList: document.getElementById('wifiList'),
+            wifiSSID: document.getElementById('wifiSelectedSSID'),
+            wifiSec: document.getElementById('wifiSelectedSec'),
+            wifiPass: document.getElementById('wifiPassInput'),
             liveChart: document.getElementById('signalChart'),
             disp: { rssi: document.getElementById('dispRSSI'), rate: document.getElementById('dispRate') },
             dial: document.getElementById('dialCanvas'),
@@ -311,7 +355,7 @@
             chkRaw: document.getElementById('chkShowRaw'),
             chkLog: document.getElementById('chkShowLog'),
             themeBtn: document.getElementById('themeBtn'),
-            mini: { state: document.getElementById('p2State'), rssi: document.getElementById('p2RSSI'), ip: document.getElementById('p2IP'), ssid: document.getElementById('miniSSID'), rssi2: document.getElementById('miniRSSI'), state2: document.getElementById('miniState') }
+            mini: { state: document.getElementById('miniState'), ip: document.getElementById('miniIP'), ssid: document.getElementById('miniSSID'), rssi2: document.getElementById('miniRSSI') }
         };
 
         // --- THEME LOGIC ---
@@ -398,7 +442,7 @@
         // --- TABS ---
         window.switchTab = (tab) => {
             currentTab = tab;
-            ['live', 'map'].forEach(t => {
+            ['live', 'map', 'wifi'].forEach(t => {
                 const btn = els.tabs[t], view = els.views[t];
                 if(t === tab) {
                     btn.className = "px-4 py-1 text-xs font-bold rounded bg-indigo-600 text-white";
@@ -410,6 +454,24 @@
             });
             if(tab === 'live') { setTimeout(resizeLiveChart, 50); if(liveTarget.ssid && isConnected) sendCommand(`TRACK:${liveTarget.ssid}:${liveTarget.channel}`); }
             else if(tab === 'map') { setTimeout(() => { drawDial(); resizeRadar(); }, 50); if(mapTarget.ssid && isConnected) sendCommand(`TRACK:${mapTarget.ssid}:${mapTarget.channel}`); else if(isConnected) sendCommand("STOP"); }
+        };
+
+        let selectedWifi = { ssid: "", sec: "" };
+
+        window.connectWiFi = async () => {
+            if(!isConnected) { alert("Please connect serial first."); return; }
+            if(!selectedWifi.ssid) { alert("Please select a network."); return; }
+
+            const pass = els.wifiPass.value;
+            alert("Sending credentials. Device may restart.");
+
+            await sendCommand(`SET_SSID:${selectedWifi.ssid}`);
+            await new Promise(r => setTimeout(r, 100)); // Small delay
+            await sendCommand(`SET_PASS:${pass}`);
+            await new Promise(r => setTimeout(r, 100));
+            await sendCommand("DO_CONNECT");
+
+            els.wifiPass.value = "";
         };
 
         // --- SERIAL ---
@@ -454,12 +516,32 @@
             } else if(line.startsWith("STATUS:DEVICE:")) updateDeviceStatus(line);
             else if(line.startsWith("STATUS:SCAN_START")) {
                 if(els.list) els.list.innerHTML = "";
+                if(els.wifiList) els.wifiList.innerHTML = "";
                 log("SYS", "SCANNING...");
             }
             else if(line.startsWith("LOG:")) log("DEV", line.substring(4));
         }
         
-        function addNetwork(ssid, rssi, ch) {
+        function addNetwork(ssid, rssi, ch, bssid, sec) {
+            // Add to Live List
+            createListItem(els.list, ssid, rssi, ch, sec, () => {
+                liveTarget={ssid,channel:ch}; mapTarget={ssid,channel:ch};
+                els.disp.rssi.innerText="--";
+                els.mapTarget.innerText = ssid;
+                if(isConnected) sendCommand(`TRACK:${ssid}:${ch}`);
+                // switchTab('live'); // Removed to prevent forced switching
+            });
+
+            // Add to WiFi List
+            createListItem(els.wifiList, ssid, rssi, ch, sec, () => {
+                selectedWifi = { ssid, sec: sec || "UNKNOWN" };
+                els.wifiSSID.innerText = ssid;
+                els.wifiSec.innerText = selectedWifi.sec;
+            });
+        }
+
+        function createListItem(container, ssid, rssi, ch, sec, onClick) {
+            if(!container) return;
             const d = document.createElement('div'); 
             d.className="list-item cursor-pointer group";
             d.innerHTML=`
@@ -467,24 +549,23 @@
                     <span class="font-bold text-slate-200 truncate w-32">${ssid}</span>
                     <span class="text-sky-400 font-mono text-xs">${rssi}dBm</span>
                 </div>
-                <div class="text-[10px] text-slate-500 font-mono">
+                <div class="text-[10px] text-slate-500 font-mono flex justify-between">
                     <span>CH:${ch}</span>
+                    <span class="text-slate-400">${sec || ''}</span>
                 </div>`;
-            d.onclick=()=>{ 
-                liveTarget={ssid,channel:ch}; mapTarget={ssid,channel:ch}; 
-                els.disp.rssi.innerText="--"; 
-                els.mapTarget.innerText = ssid;
-                if(isConnected) sendCommand(`TRACK:${ssid}:${ch}`);
-            };
-            if(els.list) els.list.appendChild(d);
+            d.onclick = onClick;
+            container.appendChild(d);
         }
 
         function updateDeviceStatus(line) {
-            if (line.startsWith("STATUS:DEVICE:CONNECTED,")) {
-                const parts = line.substring(24).split(",");
-                if (parts.length >= 6) {
+            if (line.startsWith("STATUS:DEVICE:CONNECTED")) {
+                // Split by comma. Expected: ["STATUS:DEVICE:CONNECTED", "SSID", "IP", "RSSI", "GW", "MASK", "MAC"]
+                const parts = line.split(",");
+                if (parts.length >= 4) { // At least up to RSSI
                     els.mini.state.innerText = "ONLINE"; els.mini.state.className="text-green-500 font-bold";
-                    els.mini.ssid.innerText = parts[0]; els.mini.ip.innerText = parts[1]; els.mini.rssi2.innerText = parts[2]+"dBm";
+                    els.mini.ssid.innerText = parts[1] || "";
+                    els.mini.ip.innerText = parts[2] || "--";
+                    els.mini.rssi2.innerText = (parts[3] || "--") + "dBm";
                 }
             } else if(line.includes("DISCONNECTED")) els.mini.state.innerText="OFFLINE";
         }
