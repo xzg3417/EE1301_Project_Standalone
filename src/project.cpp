@@ -6,7 +6,7 @@
 
 #include "Particle.h"
 
-// --- 函数声明 ---
+// --- Function Declarations ---
 void performFullScan();
 void performStableTracking();
 void performPing(String target, int count);
@@ -15,7 +15,7 @@ void reportDeviceStatus();
 String macToString(const uint8_t* mac);
 String securityToString(int security);
 
-// 状态定义
+// State Definitions
 enum State {
   STATE_IDLE,
   STATE_SCANNING,
@@ -24,7 +24,7 @@ enum State {
 
 State currentState = STATE_IDLE;
 
-// 追踪目标信息
+// Tracking Target Information
 String targetSSID = "";
 int targetChannel = 0;
 
@@ -40,7 +40,7 @@ void setup() {
 }
 
 void loop() {
-  // 1. 处理串口指令
+  // 1. Process Serial Commands
   if (Serial.available() > 0) {
     String cmd = Serial.readStringUntil('\n');
     cmd.trim();
@@ -80,7 +80,7 @@ void loop() {
     }
   }
 
-  // 2. 状态机逻辑
+  // 2. State Machine Logic
   switch (currentState) {
     case STATE_SCANNING:
       performFullScan();
@@ -88,7 +88,7 @@ void loop() {
       break;
 
     case STATE_TRACKING:
-      // 保持 1ms 的最小间隔，尽可能快地获取数据
+      // Maintain minimum 1ms interval, acquire data as fast as possible
       if (millis() - lastUpdate > 1) { 
         performStableTracking();
         lastUpdate = millis();
@@ -99,14 +99,14 @@ void loop() {
       break;
   }
 
-  // 3. 定时报告设备状态 (3秒一次)
+  // 3. Report Device Status Periodically (Every 3 seconds)
   if (millis() - lastStatusReport > 3000) {
     reportDeviceStatus();
     lastStatusReport = millis();
   }
 }
 
-// 报告设备状态 (使用逗号分隔，避免 MAC 地址冲突)
+// Report device status (comma separated to avoid MAC address conflicts)
 void reportDeviceStatus() {
   if (WiFi.ready()) {
     Serial.print("STATUS:DEVICE:CONNECTED,"); 
@@ -115,7 +115,7 @@ void reportDeviceStatus() {
     Serial.print(WiFi.localIP());
     Serial.print(",");
     
-    // RSSI 估算转换 (0-100% -> -90dBm to -30dBm)
+    // RSSI estimation conversion (0-100% -> -90dBm to -30dBm)
     WiFiSignal sig = WiFi.RSSI();
     int rssi = (int)((sig.getStrength() * 0.6) - 90);
     Serial.print(rssi);
@@ -150,7 +150,7 @@ void performFullScan() {
   }
   
   for (int i = 0; i < found; i++) {
-    // 协议: LIST:SSID,RSSI,CHANNEL,BSSID,SECURITY
+    // Protocol: LIST:SSID,RSSI,CHANNEL,BSSID,SECURITY
     Serial.print("LIST:");
     Serial.print(aps[i].ssid);
     Serial.print(",");
@@ -190,7 +190,7 @@ void performPing(String target, int count) {
 }
 
 void performStableTracking() {
-  // 核心追踪逻辑：全信道扫描
+  // Core Tracking Logic: Full Channel Scan
   int found = WiFi.scan(aps, 50);
   
   int max_rssi = -120;
@@ -218,8 +218,8 @@ void performStableTracking() {
     Serial.print(",");
     Serial.println(currentBSSID);
   } else {
-    // 没扫到 (可能信号太弱或信标帧丢失)
-    // 仍然发送心跳，方便前端判断连接状态
+    // Not found (signal might be too weak or beacon frame lost)
+    // Continue sending heartbeat for frontend to judge connection status
     Serial.println("DATA:-120,0,SCANNING...");
   }
 }

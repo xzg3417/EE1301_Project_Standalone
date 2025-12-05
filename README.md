@@ -1,100 +1,54 @@
-# project
+# Web Serial Radar Mapping Engine
 
-This firmware project was created using [Particle Developer Tools](https://www.particle.io/developer-tools/) and is compatible with all [Particle Devices](https://www.particle.io/devices/).
+## Project Introduction
 
-Feel free to replace this README.md file with your own content, or keep it for reference.
+The Web Serial Radar Mapping Engine is a semi-automated mapping tool designed to visualize and track Wi-Fi signal strength and sources. The system utilizes a Particle Photon 2 hardware device as a scanning backend, communicating with a frontend web application via the Web Serial API.
 
-## Table of Contents
-- [Introduction](#introduction)
-- [Prerequisites To Use This Template](#prerequisites-to-use-this-repository)
-- [Getting Started](#getting-started)
-- [Particle Firmware At A Glance](#particle-firmware-at-a-glance)
-  - [Logging](#logging)
-  - [Setup and Loop](#setup-and-loop)
-  - [Delays and Timing](#delays-and-timing)
-  - [Testing and Debugging](#testing-and-debugging)
-  - [GitHub Actions (CI/CD)](#github-actions-cicd)
-  - [OTA](#ota)
-- [Support and Feedback](#support-and-feedback)
-- [Version](#version)
+This project enables users to:
+- Scan for nearby Wi-Fi networks in real-time.
+- Track signal strength (RSSI) of specific targets over time.
+- Perform directional mapping by recording signal strength at various angles.
+- Visualize signal data on a radar chart and a live time-series chart.
+- Estimate the direction of a signal source based on recorded data points.
 
-## Introduction
+The core logic resides in the firmware (`src/project.cpp`) which handles Wi-Fi scanning and serial communication, while the frontend (`index.html`, `script.js`, `style.css`) provides the user interface and data visualization.
 
-For an in-depth understanding of this project template, please refer to our [documentation](https://docs.particle.io/firmware/best-practices/firmware-template/).
+## Code Analysis
 
-## Prerequisites To Use This Repository
+The codebase is structured into two main components: the Firmware (Backend) and the Web Interface (Frontend).
 
-To use this software/firmware on a device, you'll need:
+### Firmware (`src/project.cpp`)
+- **Platform**: Particle Photon 2 (C++).
+- **Core Functionality**:
+  - **Serial Command Processing**: Listens for commands like `SCAN`, `TRACK`, `STOP`, and `PING`.
+  - **State Machine**: Manages the device state (`IDLE`, `SCANNING`, `TRACKING`).
+  - **Wi-Fi Scanning**: Uses `WiFi.scan()` to detect networks and `WiFi.RSSI()` for signal strength.
+  - **Tracking Logic**: Continuously scans for a specific target SSID and reports the strongest signal found.
+  - **Device Status**: Periodically reports connection status, IP, and MAC address.
 
-- A [Particle Device](https://www.particle.io/devices/).
-- Windows/Mac/Linux for building the software and flashing it to a device.
-- [Particle Development Tools](https://docs.particle.io/getting-started/developer-tools/developer-tools/) installed and set up on your computer.
-- Optionally, a nice cup of tea (and perhaps a biscuit).
+### Web Interface
+- **HTML (`index.html`)**: Defines the structure of the application, including the sidebar, main view area, and terminal panel.
+- **CSS (`style.css`)**: Provides styling for the dark/light themes, layout management (flexbox), and custom UI components like the dial and radar.
+- **JavaScript (`script.js`)**:
+  - **Web Serial API**: Manages the connection to the Photon 2 device (`navigator.serial`).
+  - **Data Visualization**: Uses HTML5 Canvas for the Radar Chart (`drawRadar`), Dial UI (`drawDial`), and Live Signal Chart (`drawLiveChart`).
+  - **Data Management**: Handles CSV import/export of mapping data.
+  - **Algorithm**: Implements a weighted vector sum algorithm to estimate the signal source direction.
 
-## Getting Started
+## Technical Path
 
-1. While not essential, we recommend running the [device setup process](https://setup.particle.io/) on your Particle device first. This ensures your device's firmware is up-to-date and you have a solid baseline to start from.
+1.  **Hardware Abstraction**: The Particle Photon 2 is used as a Wi-Fi radio interface. It abstracts the low-level 802.11 scanning into simple serial data streams.
+2.  **Communication Protocol**: A custom ASCII-based protocol is defined for communication between the browser and the device:
+    -   **Commands**: `SCAN`, `TRACK:SSID:CH`, `PING:TARGET:COUNT`.
+    -   **Responses**: `LIST:...`, `DATA:...`, `STATUS:...`.
+3.  **Frontend Architecture**:
+    -   **Event-Driven**: The UI updates in response to serial data events and user interactions.
+    -   **Canvas Rendering**: Custom drawing functions are used instead of heavy charting libraries to maintain performance and control over the visual style (Radar/Dial).
+    -   **Responsive Design**: The layout supports resizing panels to adapt to different screen sizes or workflows.
+4.  **Signal Processing**:
+    -   **RSSI Conversion**: Raw signal strength (dBm) is normalized for display on the radar chart.
+    -   **Source Estimation**: A simple trigonometric approach (weighted average of vectors) is used to predict the direction of the signal source.
 
-2. If you haven't already, open this project in Visual Studio Code (File -> Open Folder). Then [compile and flash](https://docs.particle.io/getting-started/developer-tools/workbench/#cloud-build-and-flash) your device. Ensure your device's USB port is connected to your computer.
+## Test Environment
 
-3. Verify the device's operation by monitoring its logging output:
-    - In Visual Studio Code with the Particle Plugin, open the [command palette](https://docs.particle.io/getting-started/developer-tools/workbench/#particle-commands) and choose "Particle: Serial Monitor".
-    - Or, using the Particle CLI, execute:
-    ```
-    particle serial monitor --follow
-    ```
-
-4. Uncomment the code at the bottom of the cpp file in your src directory to publish to the Particle Cloud! Login to console.particle.io to view your devices events in real time.
-
-5. Customize this project! For firmware details, see [Particle firmware](https://docs.particle.io/reference/device-os/api/introduction/getting-started/). For information on the project's directory structure, visit [this link](https://docs.particle.io/firmware/best-practices/firmware-template/#project-overview).
-
-## Particle Firmware At A Glance
-
-### Logging
-
-The firmware includes a [logging library](https://docs.particle.io/reference/device-os/api/logging/logger-class/). You can display messages at different levels and filter them:
-
-```
-Log.trace("This is trace message");
-Log.info("This is info message");
-Log.warn("This is warn message");
-Log.error("This is error message");
-```
-
-### Setup and Loop
-
-Particle projects originate from the Wiring/Processing framework, which is based on C++. Typically, one-time setup functions are placed in `setup()`, and the main application runs from the `loop()` function.
-
-For advanced scenarios, explore our [threading support](https://docs.particle.io/firmware/software-design/threading-explainer/).
-
-### Delays and Timing
-
-By default, the setup() and loop() functions are blocking whilst they run, meaning that if you put in a delay, your entire application will wait for that delay to finish before anything else can run. 
-
-For techniques that allow you to run multiple tasks in parallel without creating threads, checkout the code example [here](https://docs.particle.io/firmware/best-practices/firmware-template/).
-
-(Note: Although using `delay()` isn't recommended for best practices, it's acceptable for testing.)
-
-### Testing and Debugging
-
-For firmware testing and debugging guidance, check [this documentation](https://docs.particle.io/troubleshooting/guides/build-tools-troubleshooting/debugging-firmware-builds/).
-
-### GitHub Actions (CI/CD)
-
-This project provides a YAML file for GitHub, automating firmware compilation whenever changes are pushed. More details on [Particle GitHub Actions](https://docs.particle.io/firmware/best-practices/github-actions/) are available.
-
-### OTA
-
-To learn how to utilize Particle's OTA service for device updates, consult [this documentation](https://docs.particle.io/getting-started/cloud/ota-updates/).
-
-Test OTA with the 'Particle: Cloud Flash' command in Visual Studio Code or the CLI command 'particle flash'!
-
-This firmware supports binary assets in OTA packages, allowing the inclusion of audio, images, configurations, and external microcontroller firmware. More details are [here](https://docs.particle.io/reference/device-os/api/asset-ota/asset-ota/).
-
-## Support and Feedback
-
-For support or feedback on this template or any Particle products, please join our [community](https://community.particle.io)!
-
-## Version
-
-Template version 1.0.2
+-   **Device Firmware Version**: photon2@6.3.3

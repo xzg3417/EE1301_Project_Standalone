@@ -1,4 +1,4 @@
-// --- Globals ---
+// --- Global Variables ---
 let currentTab = 'live';
 let showRaw = false, showLogs = true;
 let port, reader, writer, isConnected = false;
@@ -11,7 +11,7 @@ let mapData = [], measurementID = 1, isMeasuring = false, currentSamples = [], r
 let predictedAngle = null, radarPoints = [], hoveredPointId = null;
 let isLightMode = true;
 
-// --- DOM Elements ---
+// --- DOM Elements Reference ---
 const els = {
     tabs: { live: document.getElementById('tab-live'), map: document.getElementById('tab-map'), wifi: document.getElementById('tab-wifi') },
     views: { live: document.getElementById('view-live'), map: document.getElementById('view-map'), wifi: document.getElementById('view-wifi') },
@@ -41,15 +41,18 @@ const els = {
     mini: { state: document.getElementById('miniState'), ip: document.getElementById('miniIP'), ssid: document.getElementById('miniSSID'), rssi2: document.getElementById('miniRSSI') }
 };
 
-// --- THEME LOGIC ---
+// --- Theme Logic ---
 const COLORS = {
     dark: { bg: "#000000", grid: "#1e293b", stroke: "#38bdf8", fill: "rgba(56, 189, 248, 0.2)", dialBg1: "#1e293b", dialBg2: "#0f172a", dialRing: "#334155", tickM: "#cbd5e1", tickm: "#475569", needle: "#e11d48", text: "#fff" },
     light: { bg: "#ffffff", grid: "#cbd5e1", stroke: "#0284c7", fill: "rgba(2, 132, 199, 0.2)", dialBg1: "#f1f5f9", dialBg2: "#e2e8f0", dialRing: "#94a3b8", tickM: "#334155", tickm: "#64748b", needle: "#dc2626", text: "#0f172a" }
 };
 
+// Toggle Raw Data logging
 if(els.chkRaw) els.chkRaw.addEventListener('change', (e) => showRaw = e.target.checked);
+// Toggle Log display
 if(els.chkLog) els.chkLog.addEventListener('change', (e) => showLogs = e.target.checked);
 
+// Toggle Theme (Light/Dark)
 if(els.themeBtn) els.themeBtn.addEventListener('click', () => {
     isLightMode = !isLightMode;
     if(isLightMode) {
@@ -65,9 +68,11 @@ if(els.themeBtn) els.themeBtn.addEventListener('click', () => {
     }
     drawDial(); drawRadar(); drawLiveChart();
 });
+
+// Get current theme colors
 function getTheme() { return isLightMode ? COLORS.light : COLORS.dark; }
 
-// --- LAYOUT RESIZING & COL RESIZING ---
+// --- Layout Resizing ---
 function makeResizable(resizer, type, el1, el2, el3) {
     if (!resizer) return;
     let startPos, startSize1, startSize3;
@@ -102,7 +107,7 @@ makeResizable(document.getElementById('resizer-1'), 'h', els.panels.left, els.pa
 makeResizable(document.getElementById('resizer-2'), 'h', els.panels.left, els.panels.center, els.panels.right);
 makeResizable(document.getElementById('resizer-terminal'), 'v', els.panels.terminal);
 
-// Column resizing logic
+// --- Table Column Resizing Logic ---
 document.querySelectorAll('.col-resizer').forEach(resizer => {
     let startX, startW;
     const th = resizer.parentElement;
@@ -122,7 +127,7 @@ document.querySelectorAll('.col-resizer').forEach(resizer => {
     });
 });
 
-// --- TABS ---
+// --- Tab Switching Logic ---
 window.switchTab = (tab) => {
     currentTab = tab;
     ['live', 'map', 'wifi'].forEach(t => {
@@ -147,7 +152,7 @@ window.startPing = () => {
     sendCommand(`PING:${target}:${count}`);
 };
 
-// --- SERIAL ---
+// --- Serial Connection & Communication ---
 if(els.connect) els.connect.addEventListener('click', async () => {
     if ("serial" in navigator) {
         try {
@@ -159,7 +164,9 @@ if(els.connect) els.connect.addEventListener('click', async () => {
         } catch(e) { log("ERR", e.message); }
     } else alert("No Serial API");
 });
+
 if(els.scan) els.scan.addEventListener('click', () => sendCommand("SCAN"));
+
 async function readLoop() {
     let buffer = "";
     try {
@@ -176,7 +183,9 @@ async function readLoop() {
         }
     } catch(e){ log("ERR", "DISCONNECTED"); isConnected=false; }
 }
+
 async function sendCommand(c) { if(writer) await writer.write(c+"\n"); }
+
 function processLine(line) {
     if(!line) return;
     if(line.startsWith("DATA:")) {
@@ -235,7 +244,7 @@ function updateDeviceStatus(line) {
     } else if(line.includes("DISCONNECTED")) els.mini.state.innerText="OFFLINE";
 }
 
-// --- DATA ---
+// --- Data Export & Import ---
 window.exportCSV = () => {
     let csv = "ID,Angle,AvgRSSI,Count,Raw_Samples\n";
     mapData.forEach(d => {
@@ -279,7 +288,7 @@ window.importCSV = (input) => {
     reader.readAsText(file); input.value = '';
 };
 
-// --- MAP & RADAR ---
+// --- Map & Radar Visualization ---
 function log(l,m, isRaw=false) {
     if(!isRaw && !showLogs) return;
     const d=document.createElement('div');
@@ -479,7 +488,7 @@ window.calculateSource = () => {
     els.predResult.innerHTML = `<span class='text-yellow-400 font-bold'>EST: ${deg}°</span>`; drawRadar();
 };
 
-// Resize
+// --- Live Chart Logic ---
 const liveCtx = els.liveChart.getContext('2d');
 function resizeLiveChart() { if(els.liveChart.parentElement.offsetWidth > 0) { els.liveChart.width = els.liveChart.parentElement.offsetWidth; els.liveChart.height = els.liveChart.parentElement.offsetHeight; drawLiveChart(); } }
 
