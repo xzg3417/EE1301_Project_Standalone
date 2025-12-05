@@ -75,8 +75,8 @@ void loop() {
       break;
 
     case STATE_TRACKING:
-      // 保持 200ms 的最小间隔，给 WiFi 模组喘息时间
-      if (millis() - lastUpdate > 200) { 
+      // 保持 1ms 的最小间隔，尽可能快地获取数据
+      if (millis() - lastUpdate > 1) { 
         performStableTracking();
         lastUpdate = millis();
       }
