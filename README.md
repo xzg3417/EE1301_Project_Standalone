@@ -1,114 +1,127 @@
-# Web Serial Radar Mapping Engine
+Language: 🇺🇸 | [🇨🇳](./README.zh-CN.md) | [🇷🇺](./README.ru-RU.md) | [🇹🇷](./README.tr-TR.md) | [🇯🇵](./README.ja-JP.md) | [🇫🇷](./README.fr-FR.md) | [🇵🇹](./README.pt-BR.md) | [🇸🇦](./README.ar-DZ.md) | [🇪🇸](./README.es-ES.md)
 
-## Project Introduction
+<h1 align="center">Ant Design Pro</h1>
 
-The Web Serial Radar Mapping Engine is a semi-automated mapping tool designed to visualize and track Wi-Fi signal strength and sources. The system utilizes a Particle Photon 2 hardware device as a scanning backend, communicating with a frontend web application via the Web Serial API.
+<div align="center">
 
-This project enables users to:
-- Scan for nearby Wi-Fi networks in real-time.
-- Track signal strength (RSSI) of specific targets over time.
-- Perform directional mapping by recording signal strength at various angles.
-- Visualize signal data on a radar chart and a live time-series chart.
-- Estimate the direction of a signal source based on recorded data points.
+An out-of-box UI solution for enterprise applications as a React boilerplate.
 
-The core logic resides in the firmware (`src/project.cpp`) which handles Wi-Fi scanning and serial communication, while the frontend (`index.html`, `script.js`, `style.css`) provides the user interface and data visualization.
+[![CI](https://github.com/ant-design/ant-design-pro/actions/workflows/ci.yml/badge.svg)](https://github.com/ant-design/ant-design-pro/actions/workflows/ci.yml)
+[![Preview Deploy](https://github.com/ant-design/ant-design-pro/actions/workflows/preview-deploy.yml/badge.svg)](https://github.com/ant-design/ant-design-pro/actions/workflows/preview-deploy.yml)
+[![Build With Umi](https://img.shields.io/badge/build%20with-umi-028fe4.svg?style=flat-square)](http://umijs.org/)
+[![Checked with Biome](https://img.shields.io/badge/Checked_with-Biome-60a5fa?style=flat&logo=biome)](https://biomejs.dev)
+[![](https://badgen.net/badge/icon/Ant%20Design?icon=https://gw.alipayobjects.com/zos/antfincdn/Pp4WPgVDB3/KDpgvguMpGfqaHPjicRK.svg&label)](https://ant.design/)
 
-## Code Analysis
+<img width="1718" height="1191" alt="light theme preview" src="https://github.com/user-attachments/assets/74ad0b4a-e086-4955-8edd-9f2cff31aee8" />
+<img width="1718" height="1191" alt="dark theme preview" src="https://github.com/user-attachments/assets/d4bcb7c1-42c7-4c0f-b130-1193a931f9f7" />
 
-The codebase is structured into two main components: the Firmware (Backend) and the Web Interface (Frontend).
+</div>
 
-### Firmware (`src/project.cpp`)
-- **Platform**: Particle Photon 2 (C++).
-- **Core Functionality**:
-  - **Serial Command Processing**: Listens for commands like `SCAN`, `TRACK`, `STOP`, and `PING`.
-  - **State Machine**: Manages the device state (`IDLE`, `SCANNING`, `TRACKING`).
-  - **Wi-Fi Scanning**: Uses `WiFi.scan()` to detect networks and `WiFi.RSSI()` for signal strength.
-  - **Tracking Logic**: Continuously scans for a specific target SSID and reports the strongest signal found.
-  - **Device Status**: Periodically reports connection status, IP, and MAC address.
+- Preview: http://preview.pro.ant.design
+- Home Page: http://pro.ant.design
+- Documentation: http://pro.ant.design/docs/getting-started
+- ChangeLog: http://pro.ant.design/docs/changelog
+- FAQ: http://pro.ant.design/docs/faq
 
-### Web Interface
-- **HTML (`index.html`)**: Defines the structure of the application, including the sidebar, main view area, and terminal panel.
-- **CSS (`style.css`)**: Provides styling for the dark/light themes, layout management (flexbox), and custom UI components like the dial and radar.
-- **JavaScript (`script.js`)**:
-  - **Web Serial API**: Manages the connection to the Photon 2 device (`navigator.serial`).
-  - **Data Visualization**: Uses HTML5 Canvas for the Radar Chart (`drawRadar`), Dial UI (`drawDial`), and Live Signal Chart (`drawLiveChart`).
-  - **Data Management**: Handles CSV import/export of mapping data.
-  - **Algorithm**: Implements a weighted vector sum algorithm to estimate the signal source direction.
+## Features
 
-## Technical Path
+- :bulb: **TypeScript**: A language for application-scale JavaScript
+- :scroll: **Blocks**: Build page with block template
+- :gem: **Neat Design**: Follow [Ant Design specification](http://ant.design/)
+- :triangular_ruler: **Common Templates**: Typical templates for enterprise applications
+- :rocket: **State of The Art Development**: Newest development stack of React/umi/dva/antd
+- :iphone: **Responsive**: Designed for variable screen sizes
+- :art: **Theming**: Customizable theme with simple config
+- :globe_with_meridians: **International**: Built-in i18n solution
+- :gear: **Best Practices**: Solid workflow to make your code healthy
+- :1234: **Mock development**: Easy to use mock development solution
+- :white_check_mark: **UI Test**: Fly safely with unit and e2e tests
 
-1.  **Hardware Abstraction**: The Particle Photon 2 is used as a Wi-Fi radio interface. It abstracts the low-level 802.11 scanning into simple serial data streams.
-2.  **Communication Protocol**: A custom ASCII-based protocol is defined for communication between the browser and the device:
-    -   **Commands**: `SCAN`, `TRACK:SSID:CH`, `PING:TARGET:COUNT`.
-    -   **Responses**: `LIST:...`, `DATA:...`, `STATUS:...`.
-3.  **Frontend Architecture**:
-    -   **Event-Driven**: The UI updates in response to serial data events and user interactions.
-    -   **Canvas Rendering**: Custom drawing functions are used instead of heavy charting libraries to maintain performance and control over the visual style (Radar/Dial).
-    -   **Responsive Design**: The layout supports resizing panels to adapt to different screen sizes or workflows.
-4.  **Signal Processing**:
-    -   **RSSI Conversion**: Raw signal strength (dBm) is normalized for display on the radar chart.
-    -   **Source Estimation**: A simple trigonometric approach (weighted average of vectors) is used to predict the direction of the signal source.
+## Templates
 
-## Algorithm Implementation Details
-
-The core feature of the Radar Mapping Engine is the estimation of the signal source direction. This is achieved using a **Weighted Vector Sum** algorithm, which treats each measurement as a vector pointing in the scanned direction with a magnitude proportional to the signal strength.
-
-### 1. Data Collection & Pre-processing
-Before the algorithm runs, data is collected by performing angular sweeps. For each angle $\theta$, multiple RSSI (Received Signal Strength Indicator) samples are taken and averaged to reduce noise.
-
-```javascript
-// From finishMeasurement() in script.js
-let avg = Math.round(currentSamples.reduce((a, b) => a + b, 0) / currentSamples.length);
-mapData.push({ ..., angle: dialAngle, rssi: avg, ... });
+```
+- Dashboard
+  - Analytic
+  - Monitor
+  - Workspace
+- Form
+  - Basic Form
+  - Step Form
+  - Advanced From
+- List
+  - Standard Table
+  - Standard List
+  - Card List
+  - Search List (Project/Applications/Article)
+- Profile
+  - Simple Profile
+  - Advanced Profile
+- Account
+  - Account Center
+  - Account Settings
+- Result
+  - Success
+  - Failed
+- Exception
+  - 403
+  - 404
+  - 500
+- User
+  - Login
+  - Register
+  - Register Result
 ```
 
-Only data points with a signal strength greater than -100 dBm are considered for the calculation to filter out background noise.
+## Usage
 
-### 2. Weight Calculation (Signal Amplitude)
-The RSSI value (in dBm) is logarithmic. To perform a vector sum, we need a linear magnitude. The algorithm converts RSSI to a weight $w$ that approximates the **signal amplitude** (voltage).
+### Use bash
 
-The formula used is:
-$$ w = 10^{\frac{RSSI + 100}{20}} $$
+We provide pro-cli to quickly initialize scaffolding.
 
-This is derived from the relationship where Power $\propto$ Amplitude$^2$. Since $P_{dBm} = 10 \log_{10}(P_{mW})$, converting back to a linear scale proportional to voltage gives us the division by 20. The `+100` offset ensures the exponent is positive for typical Wi-Fi signals (usually > -100 dBm), effectively scaling the result without changing the relative weights.
-
-```javascript
-// From calculateSource() in script.js
-let w = Math.pow(10, (d.rssi+100)/20);
+```bash
+# use npm
+npm i @ant-design/pro-cli -g
+pro create myapp
 ```
 
-### 3. Vector Decomposition
-Each measurement $i$ at angle $\theta_i$ with weight $w_i$ is converted into Cartesian coordinates $(x_i, y_i)$.
-The coordinate system is adjusted so that $0^\circ$ corresponds to North (Up). To align with standard trigonometric functions (where $0^\circ$ is East), we shift the angle by $-90^\circ$.
+Choose the pro template. Simple is the basic template, which only provides the basic content of the framework operation. Complete contains all blocks, which is not suitable for secondary development as a basic template.
 
-$$ \theta'_{i} = (\theta_i - 90) \times \frac{\pi}{180} $$
-$$ x_i = w_i \cos(\theta'_{i}) $$
-$$ y_i = w_i \sin(\theta'_{i}) $$
-
-```javascript
-// From calculateSource() in script.js
-let r = (d.angle-90)*Math.PI/180;
-sumSin += Math.sin(r)*w; // Accumulate y components
-sumCos += Math.cos(r)*w; // Accumulate x components
-```
-*Note: The code uses `sumSin` for the y-component accumulation and `sumCos` for the x-component.*
-
-### 4. Resultant Vector & Direction Estimation
-The algorithm sums all individual vectors to find the resultant vector $\vec{R} = (\sum x_i, \sum y_i)$.
-The angle of this resultant vector represents the estimated direction of the signal source. We use the `atan2` function to find the angle and then reverse the rotation applied earlier.
-
-$$ \theta_{est} = \text{atan2}(\sum y_i, \sum x_i) \times \frac{180}{\pi} + 90 $$
-
-Finally, the angle is normalized to be within $[0, 360)$.
-
-```javascript
-// From calculateSource() in script.js
-let deg = Math.round(Math.atan2(sumSin,sumCos)*180/Math.PI + 90);
-if(deg<0) deg+=360;
+```shell
+? 🚀 Full or a simple scaffold? (Use arrow keys)
+❯ simple
+  complete
 ```
 
-This method is effective because strong signals (high RSSI) have exponentially higher weights, pulling the resultant vector significantly towards the source, while weaker reflections or side-lobes have minimal impact.
+Initialized Git repository:
 
-## Test Environment
+```shell
+$ git init myapp
+```
 
--   **Device Firmware Version**: photon2@6.3.3
+Install dependencies:
+
+```shell
+$ cd myapp && tyarn
+// or
+$ cd myapp && npm install
+```
+
+## Browsers support
+
+Modern browsers.
+
+| [<img src="https://raw.githubusercontent.com/alrra/browser-logos/master/src/edge/edge_48x48.png" alt="Edge" width="24px" height="24px" />](http://godban.github.io/browsers-support-badges/)</br>Edge | [<img src="https://raw.githubusercontent.com/alrra/browser-logos/master/src/firefox/firefox_48x48.png" alt="Firefox" width="24px" height="24px" />](http://godban.github.io/browsers-support-badges/)</br>Firefox | [<img src="https://raw.githubusercontent.com/alrra/browser-logos/master/src/chrome/chrome_48x48.png" alt="Chrome" width="24px" height="24px" />](http://godban.github.io/browsers-support-badges/)</br>Chrome | [<img src="https://raw.githubusercontent.com/alrra/browser-logos/master/src/safari/safari_48x48.png" alt="Safari" width="24px" height="24px" />](http://godban.github.io/browsers-support-badges/)</br>Safari | [<img src="https://raw.githubusercontent.com/alrra/browser-logos/master/src/opera/opera_48x48.png" alt="Opera" width="24px" height="24px" />](http://godban.github.io/browsers-support-badges/)</br>Opera |
+| --- | --- | --- | --- | --- |
+| Edge | last 2 versions | last 2 versions | last 2 versions | last 2 versions |
+
+## Contributing
+
+Any type of contribution is welcome, here are some examples of how you may contribute to this project:
+
+- Use Ant Design Pro in your daily work.
+- Submit [issues](http://github.com/ant-design/ant-design-pro/issues) to report bugs or ask questions.
+- Propose [pull requests](http://github.com/ant-design/ant-design-pro/pulls) to improve our code.
+
+<a href="https://openomy.app/github/ant-design/ant-design-pro" target="_blank" style="display: block; width: 100%;" align="center">
+  <img src="https://openomy.app/svg?repo=ant-design/ant-design-pro&chart=bubble&latestMonth=3" target="_blank" alt="Contribution Leaderboard" style="display: block; width: 100%;" />
+</a>

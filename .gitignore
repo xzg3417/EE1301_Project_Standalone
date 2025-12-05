@@ -1,55 +1,41 @@
-# Key files
-*.der
-*.pem
+# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
 
-# Ignore build results and bundles
-*.bin
-*.zip
-[Dd]ebug/
-[Dd]ebugPublic/
-[Rr]elease/
-[Rr]eleases/
-[Bb]in/
-[Oo]bj/
-[Ll]og/
-[Ll]ogs/
-target/*
+# dependencies
+**/node_modules
+# roadhog-api-doc ignore
+/src/utils/request-temp.js
+_roadhog-api-doc
 
-# Platform-specific settings
+# production
+/dist
+
+# misc
 .DS_Store
-*.crc_block
-*.no_crc
+npm-debug.log*
+yarn-error.log
 
-# VisualStudioCode
-.vscode/*
-!.vscode/settings.json
-!.vscode/tasks.json
-!.vscode/launch.json
-!.vscode/extensions.json
-*.code-workspace
+/coverage
+.idea
+yarn.lock
+package-lock.json
+*bak
+.vscode
 
-# Ignore all local history of files
-**/.history
 
-# Windows
-Thumbs.db
-*.stackdump
-[Dd]esktop.ini
+# visual studio code
+.history
+*.log
+functions/*
+.temp/**
 
-# C Prerequisites
-*.d
+# umi
+.umi
+.umi-production
+.umi-test
+.turbopack
 
-# C Object files
-*.o
-*.ko
-*.obj
-*.elf
+# screenshot
+screenshot
+.firebase
 
-# C Linker output
-*.map
-
-# C Debug files
-*.dSYM/
-*.su
-*.idb
-*.pdb
+build
