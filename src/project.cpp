@@ -9,6 +9,7 @@
 // --- 函数声明 ---
 void performFullScan();
 void performStableTracking();
+void performPing();
 void sendLog(String level, String msg);
 void reportDeviceStatus();
 String macToString(const uint8_t* mac);
@@ -18,7 +19,8 @@ String securityToString(int security);
 enum State {
   STATE_IDLE,
   STATE_SCANNING,
-  STATE_TRACKING
+  STATE_TRACKING,
+  STATE_PING
 };
 
 State currentState = STATE_IDLE;
@@ -26,6 +28,10 @@ State currentState = STATE_IDLE;
 // 追踪目标信息
 String targetSSID = "";
 int targetChannel = 0;
+
+// Ping Info
+String pingTarget = "";
+int pingCount = 4;
 
 // WiFi Config
 String pendingSSID = "";
@@ -60,6 +66,23 @@ void loop() {
         targetChannel = cmd.substring(lastColon + 1).toInt();
         sendLog("INFO", "TARGET LOCKED: [" + targetSSID + "]");
         currentState = STATE_TRACKING;
+      }
+    }
+    else if (cmd.startsWith("PING:")) {
+      int firstColon = cmd.indexOf(':');
+      int lastColon = cmd.lastIndexOf(':');
+      if (firstColon > 0) {
+        if (lastColon > firstColon) {
+          pingTarget = cmd.substring(firstColon + 1, lastColon);
+          pingCount = cmd.substring(lastColon + 1).toInt();
+        } else {
+          pingTarget = cmd.substring(firstColon + 1);
+          pingCount = 4;
+        }
+        if(pingCount <= 0) pingCount = 4;
+        if(pingCount > 20) pingCount = 20;
+        sendLog("INFO", "PING CMD: " + pingTarget + " x" + String(pingCount));
+        currentState = STATE_PING;
       }
     }
     else if (cmd == "GET_STATUS") {
@@ -99,6 +122,11 @@ void loop() {
         performStableTracking();
         lastUpdate = millis();
       }
+      break;
+
+    case STATE_PING:
+      performPing();
+      currentState = STATE_IDLE;
       break;
 
     case STATE_IDLE:
@@ -169,6 +197,49 @@ void performFullScan() {
     Serial.println(securityToString(aps[i].security));
   }
   Serial.println("STATUS:SCAN_END");
+}
+
+void performPing() {
+  if (!WiFi.ready()) {
+    sendLog("PING", "WiFi not ready. Connect first.");
+    return;
+  }
+
+  sendLog("PING", "Resolving " + pingTarget + "...");
+  IPAddress ip;
+  if (!WiFi.resolve(pingTarget, ip)) {
+       sendLog("PING", "Unknown host: " + pingTarget);
+       return;
+  }
+
+  sendLog("PING", "Pinging " + String(ip) + " with 32 bytes:");
+
+  int sent = 0;
+  int received = 0;
+
+  for(int i=0; i<pingCount; i++) {
+      sent++;
+      unsigned long start = millis();
+      int success = WiFi.ping(ip, 1);
+      unsigned long end = millis();
+
+      if(success > 0) {
+          received++;
+          long rtt = end - start;
+          // Format compatible with typical ping output
+          sendLog("PING", "Reply from " + String(ip) + ": bytes=32 time=" + String(rtt) + "ms");
+      } else {
+           sendLog("PING", "Request timed out.");
+      }
+
+      // Delay to space out pings, unless it's the last one
+      if (i < pingCount - 1) {
+          delay(1000);
+      }
+  }
+
+  sendLog("PING", "Ping complete for " + pingTarget + ".");
+  sendLog("PING", "    Packets: Sent = " + String(sent) + ", Received = " + String(received) + ", Loss = " + String((sent-received)*100/sent) + "%");
 }
 
 void performStableTracking() {
