@@ -5,6 +5,8 @@
  */
 
 #include "Particle.h"
+PRODUCT_ID(PHN2); 
+PRODUCT_VERSION(1);
 
 // --- Function Declarations ---
 void performFullScan();

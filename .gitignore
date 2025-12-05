@@ -54,3 +54,4 @@ Thumbs.db
 *.idb
 *.pdb
 node_modules
+nul
