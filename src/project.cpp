@@ -27,6 +27,10 @@ State currentState = STATE_IDLE;
 String targetSSID = "";
 int targetChannel = 0;
 
+// WiFi Config
+String pendingSSID = "";
+String pendingPass = "";
+
 WiFiAccessPoint aps[50];
 unsigned long lastUpdate = 0;
 unsigned long lastStatusReport = 0; 
@@ -64,6 +68,25 @@ void loop() {
     else if (cmd == "STOP") {
       sendLog("INFO", "Command: STOP");
       currentState = STATE_IDLE;
+    }
+    else if (cmd.startsWith("SET_SSID:")) {
+      pendingSSID = cmd.substring(9);
+      sendLog("INFO", "Pending SSID set.");
+    }
+    else if (cmd.startsWith("SET_PASS:")) {
+      pendingPass = cmd.substring(9);
+      sendLog("INFO", "Pending Pass set.");
+    }
+    else if (cmd == "DO_CONNECT") {
+      sendLog("INFO", "Connecting to " + pendingSSID + "...");
+      WiFi.on();
+      WiFi.clearCredentials();
+      // Defaulting to WPA2/AES as per request template.
+      // In a robust app, we might pass the security type from the UI.
+      WiFi.setCredentials(pendingSSID, pendingPass, WPA2, WLAN_CIPHER_AES);
+      WiFi.connect();
+      // Reset pending to avoid accidental reuse
+      pendingPass = "";
     }
   }
 
