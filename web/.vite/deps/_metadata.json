@@ -1,0 +1,73 @@
+{
+  "hash": "c4fb42e5",
+  "configHash": "47dabdc4",
+  "lockfileHash": "c20da74b",
+  "browserHash": "2723859c",
+  "optimized": {
+    "react/jsx-dev-runtime": {
+      "src": "../../node_modules/react/jsx-dev-runtime.js",
+      "file": "react_jsx-dev-runtime.js",
+      "fileHash": "e37c6593",
+      "needsInterop": true
+    },
+    "react": {
+      "src": "../../node_modules/react/index.js",
+      "file": "react.js",
+      "fileHash": "6d260ff4",
+      "needsInterop": true
+    },
+    "react-dom/client": {
+      "src": "../../node_modules/react-dom/client.js",
+      "file": "react-dom_client.js",
+      "fileHash": "a513f342",
+      "needsInterop": true
+    },
+    "antd": {
+      "src": "../../node_modules/antd/es/index.js",
+      "file": "antd.js",
+      "fileHash": "fc873211",
+      "needsInterop": false
+    },
+    "@ant-design/icons": {
+      "src": "../../node_modules/@ant-design/icons/es/index.js",
+      "file": "@ant-design_icons.js",
+      "fileHash": "9913b200",
+      "needsInterop": false
+    },
+    "@ant-design/pro-components": {
+      "src": "../../node_modules/@ant-design/pro-components/es/index.js",
+      "file": "@ant-design_pro-components.js",
+      "fileHash": "a0bb28b4",
+      "needsInterop": false
+    },
+    "@ant-design/plots": {
+      "src": "../../node_modules/@ant-design/plots/es/index.js",
+      "file": "@ant-design_plots.js",
+      "fileHash": "15d33c7b",
+      "needsInterop": false
+    }
+  },
+  "chunks": {
+    "chunk-KK423VEK": {
+      "file": "chunk-KK423VEK.js"
+    },
+    "chunk-YPNKEWV7": {
+      "file": "chunk-YPNKEWV7.js"
+    },
+    "chunk-XXRPC34B": {
+      "file": "chunk-XXRPC34B.js"
+    },
+    "chunk-C7C3IT74": {
+      "file": "chunk-C7C3IT74.js"
+    },
+    "chunk-TO6JPNFM": {
+      "file": "chunk-TO6JPNFM.js"
+    },
+    "chunk-4ZB5GK5J": {
+      "file": "chunk-4ZB5GK5J.js"
+    },
+    "chunk-CN7VGG4H": {
+      "file": "chunk-CN7VGG4H.js"
+    }
+  }
+}
