@@ -49,6 +49,66 @@ The codebase is structured into two main components: the Firmware (Backend) and 
     -   **RSSI Conversion**: Raw signal strength (dBm) is normalized for display on the radar chart.
     -   **Source Estimation**: A simple trigonometric approach (weighted average of vectors) is used to predict the direction of the signal source.
 
+## Algorithm Implementation Details
+
+The core feature of the Radar Mapping Engine is the estimation of the signal source direction. This is achieved using a **Weighted Vector Sum** algorithm, which treats each measurement as a vector pointing in the scanned direction with a magnitude proportional to the signal strength.
+
+### 1. Data Collection & Pre-processing
+Before the algorithm runs, data is collected by performing angular sweeps. For each angle $\theta$, multiple RSSI (Received Signal Strength Indicator) samples are taken and averaged to reduce noise.
+
+```javascript
+// From finishMeasurement() in script.js
+let avg = Math.round(currentSamples.reduce((a, b) => a + b, 0) / currentSamples.length);
+mapData.push({ ..., angle: dialAngle, rssi: avg, ... });
+```
+
+Only data points with a signal strength greater than -100 dBm are considered for the calculation to filter out background noise.
+
+### 2. Weight Calculation (Signal Amplitude)
+The RSSI value (in dBm) is logarithmic. To perform a vector sum, we need a linear magnitude. The algorithm converts RSSI to a weight $w$ that approximates the **signal amplitude** (voltage).
+
+The formula used is:
+$$ w = 10^{\frac{RSSI + 100}{20}} $$
+
+This is derived from the relationship where Power $\propto$ Amplitude$^2$. Since $P_{dBm} = 10 \log_{10}(P_{mW})$, converting back to a linear scale proportional to voltage gives us the division by 20. The `+100` offset ensures the exponent is positive for typical Wi-Fi signals (usually > -100 dBm), effectively scaling the result without changing the relative weights.
+
+```javascript
+// From calculateSource() in script.js
+let w = Math.pow(10, (d.rssi+100)/20);
+```
+
+### 3. Vector Decomposition
+Each measurement $i$ at angle $\theta_i$ with weight $w_i$ is converted into Cartesian coordinates $(x_i, y_i)$.
+The coordinate system is adjusted so that $0^\circ$ corresponds to North (Up). To align with standard trigonometric functions (where $0^\circ$ is East), we shift the angle by $-90^\circ$.
+
+$$ \theta'_{i} = (\theta_i - 90) \times \frac{\pi}{180} $$
+$$ x_i = w_i \cos(\theta'_{i}) $$
+$$ y_i = w_i \sin(\theta'_{i}) $$
+
+```javascript
+// From calculateSource() in script.js
+let r = (d.angle-90)*Math.PI/180;
+sumSin += Math.sin(r)*w; // Accumulate y components
+sumCos += Math.cos(r)*w; // Accumulate x components
+```
+*Note: The code uses `sumSin` for the y-component accumulation and `sumCos` for the x-component.*
+
+### 4. Resultant Vector & Direction Estimation
+The algorithm sums all individual vectors to find the resultant vector $\vec{R} = (\sum x_i, \sum y_i)$.
+The angle of this resultant vector represents the estimated direction of the signal source. We use the `atan2` function to find the angle and then reverse the rotation applied earlier.
+
+$$ \theta_{est} = \text{atan2}(\sum y_i, \sum x_i) \times \frac{180}{\pi} + 90 $$
+
+Finally, the angle is normalized to be within $[0, 360)$.
+
+```javascript
+// From calculateSource() in script.js
+let deg = Math.round(Math.atan2(sumSin,sumCos)*180/Math.PI + 90);
+if(deg<0) deg+=360;
+```
+
+This method is effective because strong signals (high RSSI) have exponentially higher weights, pulling the resultant vector significantly towards the source, while weaker reflections or side-lobes have minimal impact.
+
 ## Test Environment
 
 -   **Device Firmware Version**: photon2@6.3.3
