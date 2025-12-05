@@ -201,18 +201,18 @@ void performFullScan() {
 
 void performPing() {
   if (!WiFi.ready()) {
-    sendLog("ERROR", "WiFi not ready. Connect first.");
+    sendLog("PING", "WiFi not ready. Connect first.");
     return;
   }
 
-  sendLog("INFO", "Resolving " + pingTarget + "...");
+  sendLog("PING", "Resolving " + pingTarget + "...");
   IPAddress ip;
   if (!WiFi.resolve(pingTarget, ip)) {
-       sendLog("ERROR", "Unknown host: " + pingTarget);
+       sendLog("PING", "Unknown host: " + pingTarget);
        return;
   }
 
-  sendLog("INFO", "Pinging " + String(ip) + " with 32 bytes:");
+  sendLog("PING", "Pinging " + String(ip) + " with 32 bytes:");
 
   int sent = 0;
   int received = 0;
@@ -231,12 +231,15 @@ void performPing() {
       } else {
            sendLog("PING", "Request timed out.");
       }
-      // Simple delay to space out pings
-      delay(1000);
+
+      // Delay to space out pings, unless it's the last one
+      if (i < pingCount - 1) {
+          delay(1000);
+      }
   }
 
-  sendLog("INFO", "Ping complete for " + pingTarget + ".");
-  sendLog("INFO", "    Packets: Sent = " + String(sent) + ", Received = " + String(received) + ", Loss = " + String((sent-received)*100/sent) + "%");
+  sendLog("PING", "Ping complete for " + pingTarget + ".");
+  sendLog("PING", "    Packets: Sent = " + String(sent) + ", Received = " + String(received) + ", Loss = " + String((sent-received)*100/sent) + "%");
 }
 
 void performStableTracking() {
