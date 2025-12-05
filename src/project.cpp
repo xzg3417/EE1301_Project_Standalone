@@ -9,6 +9,7 @@
 // --- 函数声明 ---
 void performFullScan();
 void performStableTracking();
+void performPing(String target, int count);
 void sendLog(String level, String msg);
 void reportDeviceStatus();
 String macToString(const uint8_t* mac);
@@ -26,10 +27,6 @@ State currentState = STATE_IDLE;
 // 追踪目标信息
 String targetSSID = "";
 int targetChannel = 0;
-
-// WiFi Config
-String pendingSSID = "";
-String pendingPass = "";
 
 WiFiAccessPoint aps[50];
 unsigned long lastUpdate = 0;
@@ -69,24 +66,17 @@ void loop() {
       sendLog("INFO", "Command: STOP");
       currentState = STATE_IDLE;
     }
-    else if (cmd.startsWith("SET_SSID:")) {
-      pendingSSID = cmd.substring(9);
-      sendLog("INFO", "Pending SSID set.");
-    }
-    else if (cmd.startsWith("SET_PASS:")) {
-      pendingPass = cmd.substring(9);
-      sendLog("INFO", "Pending Pass set.");
-    }
-    else if (cmd == "DO_CONNECT") {
-      sendLog("INFO", "Connecting to " + pendingSSID + "...");
-      WiFi.on();
-      WiFi.clearCredentials();
-      // Defaulting to WPA2/AES as per request template.
-      // In a robust app, we might pass the security type from the UI.
-      WiFi.setCredentials(pendingSSID, pendingPass, WPA2, WLAN_CIPHER_AES);
-      WiFi.connect();
-      // Reset pending to avoid accidental reuse
-      pendingPass = "";
+    else if (cmd.startsWith("PING:")) {
+      // PING:target:count
+      int first = cmd.indexOf(':');
+      int last = cmd.lastIndexOf(':');
+      if (last > first) {
+        String target = cmd.substring(first + 1, last);
+        int count = cmd.substring(last + 1).toInt();
+        performPing(target, count);
+      } else {
+        sendLog("ERROR", "Invalid PING format");
+      }
     }
   }
 
@@ -173,6 +163,30 @@ void performFullScan() {
     Serial.println(securityToString(aps[i].security));
   }
   Serial.println("STATUS:SCAN_END");
+}
+
+void performPing(String target, int count) {
+  if (count <= 0) count = 5;
+  sendLog("INFO", "Pinging " + target + " with " + String(count) + " attempts...");
+
+  int success = 0;
+  for (int i = 0; i < count; i++) {
+    unsigned long start = millis();
+    // nTries=1. Returns number of successful packets (1 or 0) or error (<0)
+    int result = WiFi.ping(target, 1);
+    unsigned long duration = millis() - start;
+
+    if (result > 0) {
+      success++;
+      Serial.println("LOG:RAW:Reply from " + target + ": time=" + String(duration) + "ms");
+    } else {
+      Serial.println("LOG:RAW:Request timed out.");
+    }
+    // Small delay between pings
+    if (i < count - 1) delay(1000);
+  }
+
+  sendLog("INFO", "Ping statistics: Sent=" + String(count) + ", Received=" + String(success) + ", Lost=" + String(count - success));
 }
 
 void performStableTracking() {
