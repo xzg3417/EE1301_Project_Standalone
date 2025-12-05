@@ -1,5 +1,7 @@
 # Signal Hunter v21.1: IoT Radar Mapping Engine
 
+**Demo:** https://xzg3417.github.io/EE1301_Project_Standalone/
+
 ## 0. Memo
 
 - Fix state diagram parsing error in Mermaid
