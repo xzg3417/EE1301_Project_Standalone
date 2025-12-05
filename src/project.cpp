@@ -79,7 +79,11 @@ void loop() {
     }
     else if (cmd == "DO_CONNECT") {
       sendLog("INFO", "Connecting to " + pendingSSID + "...");
-      WiFi.setCredentials(pendingSSID, pendingPass);
+      WiFi.on();
+      WiFi.clearCredentials();
+      // Defaulting to WPA2/AES as per request template.
+      // In a robust app, we might pass the security type from the UI.
+      WiFi.setCredentials(pendingSSID, pendingPass, WPA2, WLAN_CIPHER_AES);
       WiFi.connect();
       // Reset pending to avoid accidental reuse
       pendingPass = "";

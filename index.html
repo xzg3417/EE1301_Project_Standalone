@@ -124,7 +124,7 @@
             <span id="miniState" class="text-red-500 font-bold">OFFLINE</span>
             <span class="text-slate-600">|</span>
             <span class="text-slate-500">SSID:</span>
-            <span id="miniSSID" class="text-white truncate max-w-[100px]">--</span>
+            <span id="miniSSID" class="text-white">--</span>
             <span class="text-slate-500">RSSI:</span>
             <span id="miniRSSI" class="text-white">--</span>
             <div class="w-px h-3 bg-slate-700 mx-1"></div>
@@ -546,8 +546,8 @@
             d.className="list-item cursor-pointer group";
             d.innerHTML=`
                 <div class="flex justify-between mb-1">
-                    <span class="font-bold text-slate-200 truncate w-32">${ssid}</span>
-                    <span class="text-sky-400 font-mono text-xs">${rssi}dBm</span>
+                    <span class="font-bold text-slate-200 break-all pr-2">${ssid}</span>
+                    <span class="text-sky-400 font-mono text-xs whitespace-nowrap">${rssi}dBm</span>
                 </div>
                 <div class="text-[10px] text-slate-500 font-mono flex justify-between">
                     <span>CH:${ch}</span>
