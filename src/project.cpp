@@ -14,12 +14,14 @@ void sendLog(String level, String msg);
 void reportDeviceStatus();
 String macToString(const uint8_t* mac);
 String securityToString(int security);
+int parseSecurity(String sec);
 
 // 状态定义
 enum State {
   STATE_IDLE,
   STATE_SCANNING,
-  STATE_TRACKING
+  STATE_TRACKING,
+  STATE_CONNECTING_WIFI
 };
 
 State currentState = STATE_IDLE;
@@ -28,9 +30,15 @@ State currentState = STATE_IDLE;
 String targetSSID = "";
 int targetChannel = 0;
 
+// WiFi Config
+String pendingSSID = "";
+String pendingPass = "";
+int pendingSec = WLAN_SEC_WPA2;
+
 WiFiAccessPoint aps[50];
 unsigned long lastUpdate = 0;
 unsigned long lastStatusReport = 0; 
+unsigned long connectionStartTime = 0;
 
 void setup() {
   Serial.begin(115200);
@@ -66,17 +74,43 @@ void loop() {
       sendLog("INFO", "Command: STOP");
       currentState = STATE_IDLE;
     }
-    else if (cmd.startsWith("PING:")) {
-      // PING:target:count
-      int first = cmd.indexOf(':');
-      int last = cmd.lastIndexOf(':');
-      if (last > first) {
-        String target = cmd.substring(first + 1, last);
-        int count = cmd.substring(last + 1).toInt();
-        performPing(target, count);
+    else if (cmd.startsWith("SET_SSID:")) {
+      pendingSSID = cmd.substring(9);
+      sendLog("INFO", "Pending SSID set.");
+    }
+    else if (cmd.startsWith("SET_PASS:")) {
+      pendingPass = cmd.substring(9);
+      sendLog("INFO", "Pending Pass set.");
+    }
+    else if (cmd.startsWith("SET_SEC:")) {
+      String s = cmd.substring(8);
+      pendingSec = parseSecurity(s);
+      sendLog("INFO", "Pending Security set to " + s);
+    }
+    else if (cmd == "DO_CONNECT") {
+      sendLog("INFO", "Initiating connection sequence...");
+
+      WiFi.on();
+      WiFi.clearCredentials();
+      sendLog("INFO", "Credentials cleared.");
+
+      // Select appropriate overload based on security
+      if (pendingSec == WLAN_SEC_UNSEC) {
+          WiFi.setCredentials(pendingSSID);
+          sendLog("INFO", "Credentials set for OPEN network.");
       } else {
-        sendLog("ERROR", "Invalid PING format");
+          // Note: Photon 2 supports specific cipher selection,
+          // but AES is standard for WPA2/3.
+          WiFi.setCredentials(pendingSSID, pendingPass, pendingSec, WLAN_CIPHER_AES);
+          sendLog("INFO", "Credentials set for SECURE network.");
       }
+
+      WiFi.connect();
+      sendLog("INFO", "WiFi.connect() called. Waiting for link...");
+
+      currentState = STATE_CONNECTING_WIFI;
+      connectionStartTime = millis();
+      pendingPass = ""; // Clear pass from memory
     }
   }
 
@@ -85,6 +119,28 @@ void loop() {
     case STATE_SCANNING:
       performFullScan();
       currentState = STATE_IDLE; 
+      break;
+
+    case STATE_CONNECTING_WIFI:
+      // Feedback & Timeout Logic
+      if (WiFi.ready()) {
+          sendLog("SUCCESS", "Connected! IP: " + WiFi.localIP().toString());
+          currentState = STATE_IDLE;
+      } else {
+          // Provide periodic feedback every 1s
+          if (millis() - lastUpdate > 1000) {
+              int rssi = WiFi.RSSI();
+              if (rssi > 0) rssi = -100; // Fix invalid RSSI during connect
+              sendLog("INFO", "Negotiating... Signal: " + String(rssi) + "dBm");
+              lastUpdate = millis();
+          }
+
+          // Timeout after 20 seconds
+          if (millis() - connectionStartTime > 20000) {
+              sendLog("ERROR", "Connection Timed Out.");
+              currentState = STATE_IDLE;
+          }
+      }
       break;
 
     case STATE_TRACKING:
@@ -240,4 +296,15 @@ String securityToString(int security) {
     case WLAN_SEC_WPA3: return "WPA3";
     default: return "SECURE";
   }
+}
+
+int parseSecurity(String sec) {
+  sec.trim();
+  sec.toUpperCase();
+  if (sec == "OPEN") return WLAN_SEC_UNSEC;
+  if (sec == "WEP") return WLAN_SEC_WEP;
+  if (sec == "WPA") return WLAN_SEC_WPA;
+  if (sec == "WPA2") return WLAN_SEC_WPA2;
+  if (sec == "WPA3") return WLAN_SEC_WPA3;
+  return WLAN_SEC_WPA2; // Default
 }

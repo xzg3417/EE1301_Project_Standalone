@@ -305,7 +305,7 @@
         // --- Globals ---
         let currentTab = 'live';
         let showRaw = false, showLogs = true;
-        let port, reader, writer, isConnected = false;
+        var port, reader, writer, isConnected = false;
         let radarMode = 'rssi'; 
         let liveTarget = { ssid: "", channel: 0 };
         let liveChartData = new Array(150).fill(-120);
@@ -445,10 +445,20 @@
 
         window.startPing = () => {
             if(!isConnected) { alert("Please connect serial first."); return; }
-            const target = document.getElementById('pingTarget').value || "google.com";
-            const count = document.getElementById('pingCount').value || 5;
-            log("SYS", `Initiating Ping: ${target} (${count}x)...`);
-            sendCommand(`PING:${target}:${count}`);
+            if(!selectedWifi.ssid) { alert("Please select a network."); return; }
+
+            const pass = els.wifiPass.value;
+            alert("Sending credentials. See log for status.");
+
+            await sendCommand(`SET_SSID:${selectedWifi.ssid}`);
+            await new Promise(r => setTimeout(r, 100)); // Small delay
+            await sendCommand(`SET_SEC:${selectedWifi.sec}`);
+            await new Promise(r => setTimeout(r, 100));
+            await sendCommand(`SET_PASS:${pass}`);
+            await new Promise(r => setTimeout(r, 100));
+            await sendCommand("DO_CONNECT");
+
+            els.wifiPass.value = "";
         };
 
         // --- SERIAL ---
