@@ -83,12 +83,13 @@ $$ x_{total} = \sum_{i=1}^{n} (w_i \cdot \cos(\theta'_i)) $$
 $$ y_{total} = \sum_{i=1}^{n} (w_i \cdot \sin(\theta'_i)) $$
 
 ### 3.3 Resultant Calculation
-
 The estimated source direction $\theta_{est}$ is the angle of the resultant vector formed by summing all weighted measurement vectors.
 
-$$ \theta_{est} = \operatorname{atan2}(y_{total}, x_{total}) \cdot \frac{180}{\pi} + 90 $$
+$$
+\theta_{est} = \text{atan2}(y_{total}, x_{total}) \cdot \frac{180}{\pi} + 90
+$$
 
-*The final angle is normalized to the $[0, 360)$ range.*
+The final angle is normalized to the $[0, 360)$ range.
 
 ## 4. User Interface & Interaction Design
 
