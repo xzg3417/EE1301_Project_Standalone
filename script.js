@@ -15,7 +15,7 @@ let isLightMode = true;
 const els = {
     tabs: { live: document.getElementById('tab-live'), map: document.getElementById('tab-map'), wifi: document.getElementById('tab-wifi') },
     views: { live: document.getElementById('view-live'), map: document.getElementById('view-map'), wifi: document.getElementById('view-wifi') },
-    panels: { left: document.getElementById('panel-left'), center: document.getElementById('panel-center'), right: document.getElementById('panel-right'), terminal: document.getElementById('panel-terminal') },
+    panels: { left: document.getElementById('panel-left'), center: document.getElementById('panel-center'), right: document.getElementById('panel-right'), terminal: document.getElementById('panel-terminal'), liveList: document.getElementById('panel-live-list'), liveMain: document.getElementById('panel-live-main') },
     list: document.getElementById('networkList'),
     liveChart: document.getElementById('signalChart'),
     disp: { rssi: document.getElementById('dispRSSI'), rate: document.getElementById('dispRate') },
@@ -80,9 +80,13 @@ function makeResizable(resizer, type, el1, el2, el3) {
         if (type === 'h') {
             const dx = e.clientX - startPos;
             const parentW = el1.parentElement.offsetWidth;
-            if(resizer.id === 'resizer-1') {
+            if(resizer.id === 'resizer-1' || resizer.id === 'resizer-live') {
                 const newW = ((startSize1 + dx) / parentW) * 100;
-                if(newW > 10 && newW < 50) { el1.style.width = newW + '%'; drawDial(); resizeRadar(); }
+                if(newW > 10 && newW < 80) {
+                    el1.style.width = newW + '%';
+                    if (resizer.id === 'resizer-1') { drawDial(); resizeRadar(); }
+                    if (resizer.id === 'resizer-live') { resizeLiveChart(); }
+                }
             } else {
                 const newW = ((startSize3 - dx) / parentW) * 100;
                 if(newW > 10 && newW < 50) { el3.style.width = newW + '%'; resizeRadar(); }
@@ -105,6 +109,7 @@ function makeResizable(resizer, type, el1, el2, el3) {
 }
 makeResizable(document.getElementById('resizer-1'), 'h', els.panels.left, els.panels.center, els.panels.right);
 makeResizable(document.getElementById('resizer-2'), 'h', els.panels.left, els.panels.center, els.panels.right);
+makeResizable(document.getElementById('resizer-live'), 'h', els.panels.liveList, els.panels.liveMain);
 makeResizable(document.getElementById('resizer-terminal'), 'v', els.panels.terminal);
 
 // --- Table Column Resizing Logic ---
@@ -536,3 +541,22 @@ function drawLiveChart() {
 }
 window.addEventListener('resize', () => { resizeLiveChart(); if(currentTab==='map') { drawDial(); resizeRadar(); } });
 switchTab('live');
+
+// --- Zoom Logic ---
+let currentZoom = 1.0;
+const zoomOutBtn = document.getElementById('zoomOutBtn');
+const zoomInBtn = document.getElementById('zoomInBtn');
+const zoomDisplay = document.getElementById('zoomDisplay');
+
+function updateZoom() {
+    document.documentElement.style.fontSize = (16 * currentZoom) + 'px';
+    if(zoomDisplay) zoomDisplay.innerText = Math.round(currentZoom * 100) + "%";
+    setTimeout(() => { resizeLiveChart(); resizeRadar(); drawDial(); }, 100);
+}
+
+if(zoomOutBtn) zoomOutBtn.addEventListener('click', () => {
+    if(currentZoom > 0.5) { currentZoom -= 0.1; updateZoom(); }
+});
+if(zoomInBtn) zoomInBtn.addEventListener('click', () => {
+    if(currentZoom < 2.0) { currentZoom += 0.1; updateZoom(); }
+});
