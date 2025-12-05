@@ -71,20 +71,26 @@
         body.light-mode .panel { background-color: #ffffff; border-color: #cbd5e1; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
         body.light-mode .bg-slate-900 { background-color: #e2e8f0 !important; border-color: #cbd5e1; }
         body.light-mode .bg-black { background-color: #ffffff !important; border: 1px solid #e2e8f0; }
-        body.light-mode .text-slate-400 { color: #64748b !important; }
+        body.light-mode .text-slate-400 { color: #475569 !important; }
+        body.light-mode .text-slate-500 { color: #475569 !important; }
         body.light-mode .text-white { color: #0f172a !important; }
-        body.light-mode .text-sky-300 { color: #0284c7 !important; }
+        body.light-mode .text-sky-300 { color: #0369a1 !important; }
         body.light-mode .btn { background: #f1f5f9; border-color: #cbd5e1; color: #334155; }
         body.light-mode .btn:hover { background: #fff; border-color: #0ea5e9; color: #0ea5e9; }
         body.light-mode .data-box { background-color: #f1f5f9; border-color: #e2e8f0; }
         body.light-mode th { background-color: #f8fafc; border-bottom-color: #cbd5e1; color: #475569; border-right-color: #e2e8f0; }
-        body.light-mode td { border-bottom-color: #e2e8f0; border-right-color: #e2e8f0; color: #334155; }
+        body.light-mode td { border-bottom-color: #e2e8f0; border-right-color: #e2e8f0; color: #0f172a; font-weight: 500; }
         body.light-mode .list-item { border-bottom-color: #e2e8f0; }
         body.light-mode .list-item:hover { background-color: #f1f5f9; }
         body.light-mode .list-item.active { background-color: #e0f2fe; border-left-color: #0284c7; }
-        body.light-mode .dark-input { background-color: #ffffff; border-color: #cbd5e1; color: #0f172a; }
+        body.light-mode .dark-input { background-color: #ffffff; border-color: #94a3b8; color: #0f172a; }
         body.light-mode tr.sub-row td { background-color: #f1f5f9; border-bottom-color: #e2e8f0; }
         body.light-mode #radarTooltip { background-color: #ffffff; border-color: #cbd5e1; color: #0f172a; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+
+        /* Optimization for terminal/log text in light mode */
+        body.light-mode #logConsole { color: #334155 !important; }
+        body.light-mode #logConsole .text-sky-600 { color: #0369a1 !important; }
+        body.light-mode #logConsole .text-slate-600 { color: #64748b !important; }
     </style>
 </head>
 <body class="p-2 select-none">
@@ -150,8 +156,9 @@
                             <div class="flex items-baseline gap-2"><span id="dispRate" class="text-2xl text-green-400">0</span><span class="text-xs text-slate-500">Hz</span></div>
                         </div>
                     </div>
-                    <div class="flex-1 panel relative flex flex-col min-h-0">
+                    <div class="flex-1 panel relative flex flex-col min-h-0 group">
                         <div class="absolute top-2 left-2 text-[10px] text-slate-500 z-10 pointer-events-none">LIVE PLOT</div>
+                        <button onclick="openLiveChartImage()" title="Open PNG in New Tab" class="absolute top-2 right-2 z-20 text-[10px] bg-slate-800 text-sky-400 border border-slate-600 px-2 py-0.5 rounded opacity-50 hover:opacity-100 hover:text-white transition-opacity">EXPORT PNG</button>
                         <div class="w-full h-full"><canvas id="signalChart"></canvas></div>
                     </div>
                 </div>
@@ -249,7 +256,14 @@
 
         <div class="resizer-h" id="resizer-terminal"></div>
         <div id="panel-terminal" class="shrink-0 panel bg-black font-mono text-xs overflow-hidden" style="height: 120px; min-height: 40px; max-height: 50%;">
-            <div class="p-1 px-2 bg-slate-900 text-[10px] text-slate-500 border-b border-slate-800 flex justify-between"><span>SYSTEM LOG</span><button onclick="els.log.innerHTML=''" class="hover:text-white">Clear</button></div>
+            <div class="p-1 px-2 bg-slate-900 text-[10px] text-slate-500 border-b border-slate-800 flex justify-between items-center">
+                <div class="flex items-center gap-2">
+                    <span>SYSTEM LOG</span>
+                    <label class="flex items-center gap-1 cursor-pointer hover:text-slate-300 select-none"><input type="checkbox" id="chkShowRaw" class="accent-sky-500"> RAW</label>
+                    <label class="flex items-center gap-1 cursor-pointer hover:text-slate-300 select-none"><input type="checkbox" id="chkShowLog" checked class="accent-sky-500"> LOGS</label>
+                </div>
+                <button onclick="els.log.innerHTML=''" class="hover:text-white">Clear</button>
+            </div>
             <div id="logConsole" class="flex-1 overflow-y-auto custom-scroll p-1 px-2 text-slate-400"><div class="text-sky-600">> SYSTEM INITIALIZED...</div></div>
         </div>
     </div>
@@ -259,6 +273,7 @@
     <script>
         // --- Globals ---
         let currentTab = 'live';
+        let showRaw = false, showLogs = true;
         let port, reader, writer, isConnected = false;
         let radarMode = 'rssi'; 
         let liveTarget = { ssid: "", channel: 0 };
@@ -293,6 +308,8 @@
             connect: document.getElementById('connectBtn'),
             scan: document.getElementById('scanBtn'),
             log: document.getElementById('logConsole'),
+            chkRaw: document.getElementById('chkShowRaw'),
+            chkLog: document.getElementById('chkShowLog'),
             themeBtn: document.getElementById('themeBtn'),
             mini: { state: document.getElementById('p2State'), rssi: document.getElementById('p2RSSI'), ip: document.getElementById('p2IP'), ssid: document.getElementById('miniSSID'), rssi2: document.getElementById('miniRSSI'), state2: document.getElementById('miniState') }
         };
@@ -303,6 +320,9 @@
             light: { bg: "#ffffff", grid: "#cbd5e1", stroke: "#0284c7", fill: "rgba(2, 132, 199, 0.2)", dialBg1: "#f1f5f9", dialBg2: "#e2e8f0", dialRing: "#94a3b8", tickM: "#334155", tickm: "#64748b", needle: "#dc2626", text: "#0f172a" }
         };
         
+        if(els.chkRaw) els.chkRaw.addEventListener('change', (e) => showRaw = e.target.checked);
+        if(els.chkLog) els.chkLog.addEventListener('change', (e) => showLogs = e.target.checked);
+
         if(els.themeBtn) els.themeBtn.addEventListener('click', () => {
             isLightMode = !isLightMode;
             if(isLightMode) {
@@ -413,7 +433,11 @@
                     buffer += value;
                     const lines = buffer.split('\n');
                     buffer = lines.pop(); 
-                    lines.forEach(l => { try { processLine(l.trim()); } catch(e){ console.error(e); } });
+                    lines.forEach(l => {
+                        const line = l.trim();
+                        if(showRaw && line) log("RAW", line, true);
+                        try { processLine(line); } catch(e){ console.error(e); }
+                    });
                 } 
             } catch(e){ log("ERR", "DISCONNECTED"); isConnected=false; } 
         }
@@ -510,7 +534,13 @@
         };
 
         // --- MAP & RADAR ---
-        function log(l,m) { const d=document.createElement('div'); d.innerText=`[${l}] ${m}`; els.log.appendChild(d); els.log.scrollTop=els.log.scrollHeight; }
+        function log(l,m, isRaw=false) {
+            if(!isRaw && !showLogs) return;
+            const d=document.createElement('div');
+            d.innerText=`[${l}] ${m}`;
+            if(isRaw) d.classList.add('text-slate-600');
+            els.log.appendChild(d); els.log.scrollTop=els.log.scrollHeight;
+        }
         
         let dialAngle = 0, isDraggingDial = false;
         const dialCtx = els.dial.getContext('2d');
@@ -665,7 +695,7 @@
                 `;
                 const subRow = document.createElement('tr');
                 subRow.id = `subrow-${d.id}`; subRow.className = "sub-row hidden";
-                subRow.innerHTML = `<td colspan="6" class="p-1 bg-slate-900/50 inset-shadow"><div class="flex flex-wrap gap-1 text-[9px] font-mono text-slate-500"><span>RAW:</span>${d.rawSamples.map(v => `<span class="bg-slate-800 px-1 rounded text-slate-300">${v}</span>`).join('')}</div></td>`;
+                subRow.innerHTML = `<td colspan="5" class="p-1 bg-slate-900/50 inset-shadow"><div class="flex flex-wrap gap-1 text-[9px] font-mono text-slate-500"><span>RAW:</span>${d.rawSamples.map(v => `<span class="bg-slate-800 px-1 rounded text-slate-300">${v}</span>`).join('')}</div></td>`;
                 row.addEventListener('mouseenter', () => { hoveredPointId = d.id; drawRadar(); });
                 row.addEventListener('mouseleave', () => { hoveredPointId = null; drawRadar(); });
                 els.table.appendChild(row); els.table.appendChild(subRow);
@@ -706,20 +736,46 @@
         // Resize
         const liveCtx = els.liveChart.getContext('2d');
         function resizeLiveChart() { if(els.liveChart.parentElement.offsetWidth > 0) { els.liveChart.width = els.liveChart.parentElement.offsetWidth; els.liveChart.height = els.liveChart.parentElement.offsetHeight; drawLiveChart(); } }
+
+        window.openLiveChartImage = () => {
+            const w = window.open("");
+            w.document.write('<img src="' + els.liveChart.toDataURL() + '"/>');
+        };
+
         function drawLiveChart() { 
             if(currentTab!=='live') return;
             const w=els.liveChart.width, h=els.liveChart.height, C=getTheme();
             if(w<1) return;
             const ctx=liveCtx;
             ctx.fillStyle = C.bg; ctx.fillRect(0, 0, w, h);
-            ctx.strokeStyle = C.grid; ctx.lineWidth = 1; ctx.beginPath();
-            for (let y = 0; y < h; y += 40) { ctx.moveTo(0, y); ctx.lineTo(w, y); }
-            ctx.stroke();
+
+            // Auto Scale
+            let minVal = Math.min(...liveChartData, -100);
+            let maxVal = Math.max(...liveChartData, -30);
+            if(maxVal - minVal < 20) { maxVal += 10; minVal -= 10; }
+            const pRange = maxVal - minVal;
+            const xOffset = 30;
+            const yMargin = 10;
+            const drawW = w - xOffset;
+            const drawH = h - 2 * yMargin;
+
+            // Grid & Labels
+            ctx.fillStyle = C.text; ctx.font = "10px monospace"; ctx.textAlign = "right"; ctx.textBaseline = "middle";
+            ctx.strokeStyle = C.grid; ctx.lineWidth = 1;
+            const stepY = pRange / 5;
+            for(let i=0; i<=5; i++) {
+                let val = minVal + i*stepY;
+                let y = yMargin + drawH - ((val - minVal) / pRange * drawH);
+                ctx.beginPath(); ctx.moveTo(xOffset, y); ctx.lineTo(w, y); ctx.stroke();
+                ctx.fillText(Math.round(val), xOffset - 4, y);
+            }
+
+            // Plot
             ctx.strokeStyle = C.stroke; ctx.lineWidth = 2; ctx.beginPath();
-            const step = w / (liveChartData.length - 1);
+            const stepX = drawW / (liveChartData.length - 1);
             liveChartData.forEach((v, i) => {
-                let y = h - ((v + 120) / 100 * h);
-                if (i === 0) ctx.moveTo(0, y); else ctx.lineTo(i * step, y);
+                let y = yMargin + drawH - ((v - minVal) / pRange * drawH);
+                if (i === 0) ctx.moveTo(xOffset, y); else ctx.lineTo(xOffset + i * stepX, y);
             });
             ctx.stroke();
         }
