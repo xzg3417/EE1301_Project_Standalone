@@ -1,114 +1,257 @@
-# Web Serial Radar Mapping Engine
+# Signal Hunter v21.1: IoT Radar Mapping Engine
 
-## Project Introduction
+## 0. AI Usage Examples [memo]
 
-The Web Serial Radar Mapping Engine is a semi-automated mapping tool designed to visualize and track Wi-Fi signal strength and sources. The system utilizes a Particle Photon 2 hardware device as a scanning backend, communicating with a frontend web application via the Web Serial API.
+- Fix state diagram parsing error in Mermaid
+  - Replaced literal colons (:) with HTML entity #58; in the "TRACK" command label. 
+    The literal colons were conflicting with Mermaid's syntax separators, causing the graph rendering to fail.
+    - ai -> local & fix -> review & learn => easier to solve similar issues
 
-This project enables users to:
-- Scan for nearby Wi-Fi networks in real-time.
-- Track signal strength (RSSI) of specific targets over time.
-- Perform directional mapping by recording signal strength at various angles.
-- Visualize signal data on a radar chart and a live time-series chart.
-- Estimate the direction of a signal source based on recorded data points.
+## 1. Project Overview
 
-The core logic resides in the firmware (`src/project.cpp`) which handles Wi-Fi scanning and serial communication, while the frontend (`index.html`, `script.js`, `style.css`) provides the user interface and data visualization.
+**Signal Hunter** is a semi-automated IoT tool designed to visualize the invisible landscape of Wi-Fi signals. By combining a **Particle Photon 2** hardware scanner with a sophisticated **Web Serial** frontend, the system allows users to perform directional signal mapping, track specific networks in real-time, and mathematically estimate the physical location of a signal source.
 
-## Code Analysis
+Unlike standard Wi-Fi scanners that simply list available networks, Signal Hunter treats signal strength (RSSI) as a vector quantity (magnitude and direction), enabling a "Radar" visualization approach.
 
-The codebase is structured into two main components: the Firmware (Backend) and the Web Interface (Frontend).
+## 2. System Architecture
 
-### Firmware (`src/project.cpp`)
-- **Platform**: Particle Photon 2 (C++).
-- **Core Functionality**:
-  - **Serial Command Processing**: Listens for commands like `SCAN`, `TRACK`, `STOP`, and `PING`.
-  - **State Machine**: Manages the device state (`IDLE`, `SCANNING`, `TRACKING`).
-  - **Wi-Fi Scanning**: Uses `WiFi.scan()` to detect networks and `WiFi.RSSI()` for signal strength.
-  - **Tracking Logic**: Continuously scans for a specific target SSID and reports the strongest signal found.
-  - **Device Status**: Periodically reports connection status, IP, and MAC address.
+**Device**: Photon 2@6.3.3
 
-### Web Interface
-- **HTML (`index.html`)**: Defines the structure of the application, including the sidebar, main view area, and terminal panel.
-- **CSS (`style.css`)**: Provides styling for the dark/light themes, layout management (flexbox), and custom UI components like the dial and radar.
-- **JavaScript (`script.js`)**:
-  - **Web Serial API**: Manages the connection to the Photon 2 device (`navigator.serial`).
-  - **Data Visualization**: Uses HTML5 Canvas for the Radar Chart (`drawRadar`), Dial UI (`drawDial`), and Live Signal Chart (`drawLiveChart`).
-  - **Data Management**: Handles CSV import/export of mapping data.
-  - **Algorithm**: Implements a weighted vector sum algorithm to estimate the signal source direction.
+The system operates on a Host-Client architecture where the Particle Photon 2 acts as the raw data acquisition client, and the Browser acts as the processing host.
 
-## Technical Path
+```mermaid
+graph TD
+    subgraph "Hardware (Particle Photon 2)"
+        A[WiFi Radio] -->|Scan/RSSI| B[Firmware State Machine]
+        B -->|Serial UART| C[USB Interface]
+    end
 
-1.  **Hardware Abstraction**: The Particle Photon 2 is used as a Wi-Fi radio interface. It abstracts the low-level 802.11 scanning into simple serial data streams.
-2.  **Communication Protocol**: A custom ASCII-based protocol is defined for communication between the browser and the device:
-    -   **Commands**: `SCAN`, `TRACK:SSID:CH`, `PING:TARGET:COUNT`.
-    -   **Responses**: `LIST:...`, `DATA:...`, `STATUS:...`.
-3.  **Frontend Architecture**:
-    -   **Event-Driven**: The UI updates in response to serial data events and user interactions.
-    -   **Canvas Rendering**: Custom drawing functions are used instead of heavy charting libraries to maintain performance and control over the visual style (Radar/Dial).
-    -   **Responsive Design**: The layout supports resizing panels to adapt to different screen sizes or workflows.
-4.  **Signal Processing**:
-    -   **RSSI Conversion**: Raw signal strength (dBm) is normalized for display on the radar chart.
-    -   **Source Estimation**: A simple trigonometric approach (weighted average of vectors) is used to predict the direction of the signal source.
-
-## Algorithm Implementation Details
-
-The core feature of the Radar Mapping Engine is the estimation of the signal source direction. This is achieved using a **Weighted Vector Sum** algorithm, which treats each measurement as a vector pointing in the scanned direction with a magnitude proportional to the signal strength.
-
-### 1. Data Collection & Pre-processing
-Before the algorithm runs, data is collected by performing angular sweeps. For each angle $\theta$, multiple RSSI (Received Signal Strength Indicator) samples are taken and averaged to reduce noise.
-
-```javascript
-// From finishMeasurement() in script.js
-let avg = Math.round(currentSamples.reduce((a, b) => a + b, 0) / currentSamples.length);
-mapData.push({ ..., angle: dialAngle, rssi: avg, ... });
+    subgraph "Frontend (Browser)"
+        C -->|Web Serial API| D[Serial Reader Stream]
+        D -->|Parse Protocol| E[Data Controller]
+        E -->|Real-time| F[Live Chart & List]
+        E -->|Mapping Mode| G[Radar Visualization]
+        G -->|Algorithm| H[Source Estimation]
+    end
 ```
 
-Only data points with a signal strength greater than -100 dBm are considered for the calculation to filter out background noise.
+### 2.1 Hardware Implementation (C++)
+The firmware (`project.cpp`) utilizes a non-blocking **Finite State Machine (FSM)** to manage radio resources. This ensures the device remains responsive to serial commands even while performing heavy scanning operations.
 
-### 2. Weight Calculation (Signal Amplitude)
-The RSSI value (in dBm) is logarithmic. To perform a vector sum, we need a linear magnitude. The algorithm converts RSSI to a weight $w$ that approximates the **signal amplitude** (voltage).
+*   **Idle State:** Waits for serial input.
+*   **Scanning State:** Executes `WiFi.scan()` to retrieve a full list of APs (SSID, RSSI, Channel, Security).
+*   **Tracking State:** Locks onto a specific target (SSID + Channel) and samples RSSI at the maximum refresh rate allowed by the hardware (~10-20Hz).
 
-The formula used is:
+### 2.2 Serial Communication Protocol
+To ensure data integrity over the USB serial link, a custom ASCII-based protocol was designed:
+
+| Direction    | Command / Prefix | Arguments             | Description                      |
+| :----------- | :--------------- | :-------------------- | :------------------------------- |
+| **TX (Web)** | `SCAN`           | None                  | Triggers full spectrum scan.     |
+| **TX (Web)** | `TRACK`          | `SSID:CH`             | Locks tracking to specific AP.   |
+| **RX (Dev)** | `LIST:`          | `SSID,RSSI,CH...`     | Returns scan results.            |
+| **RX (Dev)** | `DATA:`          | `RSSI,CH,BSSID`       | Returns real-time tracking data. |
+| **RX (Dev)** | `STATUS:`        | `DEVICE:CONNECTED...` | Heartbeat & IP info.             |
+
+## 3. Algorithm Implementation Details
+
+The core innovation of this project is the **Source Direction Estimation**. Since the Particle Photon 2 utilizes an omnidirectional antenna, directionality is achieved through "Manual Sweeping"—the user rotates the device (or a directional shield) and records RSSI at specific angles.
+
+The system uses a **Weighted Vector Sum** algorithm to predict the source angle.
+
+### 3.1 RSSI to Weight Conversion
+Raw RSSI is logarithmic ($dBm$). To perform vector addition, we convert this to a linear magnitude ($w$) representing approximate signal amplitude. We apply an offset ($+100$) to normalize the typical Wi-Fi floor.
+
 $$ w = 10^{\frac{RSSI + 100}{20}} $$
 
-This is derived from the relationship where Power $\propto$ Amplitude$^2$. Since $P_{dBm} = 10 \log_{10}(P_{mW})$, converting back to a linear scale proportional to voltage gives us the division by 20. The `+100` offset ensures the exponent is positive for typical Wi-Fi signals (usually > -100 dBm), effectively scaling the result without changing the relative weights.
+### 3.2 Vector Decomposition
+For every measurement point $i$ consisting of an angle $\theta_i$ and signal strength $RSSI_i$, we calculate the Cartesian components. Note that the UI treats $0^\circ$ as North, requiring a coordinate shift relative to standard trigonometric circles.
 
-```javascript
-// From calculateSource() in script.js
-let w = Math.pow(10, (d.rssi+100)/20);
+$$ \theta'_{i} = (\theta_i - 90) \cdot \frac{\pi}{180} $$
+$$ x_{total} = \sum_{i=1}^{n} (w_i \cdot \cos(\theta'_i)) $$
+$$ y_{total} = \sum_{i=1}^{n} (w_i \cdot \sin(\theta'_i)) $$
+
+### 3.3 Resultant Calculation
+The estimated source direction $\theta_{est}$ is the angle of the resultant vector formed by summing all weighted measurement vectors.
+
+$$ \theta_{est} = \operatorname{atan2}(y_{total}, x_{total}) \cdot \frac{180}{\pi} + 90 $$
+
+*The final angle is normalized to the $[0, 360)$ range.*
+
+## 4. User Interface & Interaction Design
+
+To ensure the system is usable in real-world field testing, the WebUI was designed with a focus on **high-contrast data visualization** and **tactile input simulation**. The interface allows for precise control over the hardware without requiring text-based commands.
+
+### 4.1 The "Magnetic" Control Dial
+The centerpiece of the Manual Mapping interface is a custom-built **Direction Dial**. Unlike standard HTML range sliders, this component emulates a physical rotary switch with "detents" (mechanical click-stops).
+
+**Implementation Logic: Logic-Driven vs. Style-Driven**
+The "snapping" effect is achieved entirely through **JavaScript Logic (Imperative)**, not CSS Styles (Declarative).
+*   **CSS Role:** Handles the visual theme (gradients, shadows, neon glow effects) and responsive sizing.
+*   **JS Role:** Handles the physics. It calculates the angle of the mouse relative to the center, applies a mathematical quantization function, and forces the UI to render only at specific intervals.
+
+This approach ensures that the data collected is always aligned to the 16 cardinal directions (N, NNE, NE, etc.), which is critical for the consistency of the radar algorithm.
+
+### 4.2 Interaction Event Loop
+The interaction follows a "Calculate-Quantize-Render" loop, ensuring the UI feels responsive (60 FPS) while strictly enforcing data constraints.
+
+```mermaid
+graph LR
+    %% 使用双引号包裹所有文本，并用分号结尾，防止格式错误
+    A["Mouse Move Event"] --> B{"Calculate Angle"};
+    
+    %% 将特殊符号 θ 和 ° 改为纯文本，避免编码报错
+    B -- "Cartesian (x,y) to Polar" --> C["Raw Degree 0-360 deg"];
+    
+    C --> D["Quantizer Logic"];
+    
+    subgraph "Snapping Logic"
+        D -- "Angle / 22.5" --> E["Step Count"];
+        E -- "Round to Nearest Integer" --> F["Integer Step"];
+        F -- "Step * 22.5" --> G["Snapped Angle"];
+    end
+    
+    G --> H["Update State Variable"];
+    H --> I["Trigger Canvas Redraw"];
+    I --> J["Visual Feedback: Dial Needle Jumps"];
 ```
 
-### 3. Vector Decomposition
-Each measurement $i$ at angle $\theta_i$ with weight $w_i$ is converted into Cartesian coordinates $(x_i, y_i)$.
-The coordinate system is adjusted so that $0^\circ$ corresponds to North (Up). To align with standard trigonometric functions (where $0^\circ$ is East), we shift the angle by $-90^\circ$.
+### 4.3 Visual Feedback Mechanisms
+*   **Real-time Plotting:** The Live Chart uses a FIFO (First-In-First-Out) buffer to render signal history, giving immediate visual feedback on signal stability.
+*   **Radar Heatmap:** The radar chart uses transparency layers (`rgba`) to build up intensity. Overlapping measurements naturally create "hotspots," visually reinforcing the estimated source direction.
 
-$$ \theta'_{i} = (\theta_i - 90) \times \frac{\pi}{180} $$
-$$ x_i = w_i \cos(\theta'_{i}) $$
-$$ y_i = w_i \sin(\theta'_{i}) $$
+## 5. Frontend Code Design
+
+The web interface is built without heavy external frameworks to maintain high performance for real-time serial parsing.
+
+*   **`script.js`**:
+    *   **Serial Management:** Uses the native `navigator.serial` API with `TextDecoderStream` for handling incoming line-break delimited data.
+    *   **Canvas Rendering:** The Radar (`drawRadar`) and Dial (`drawDial`) are rendered on HTML5 Canvases using the 2D Context API. This allows for smooth, lag-free animations during window resizing or rapid data updates.
+    *   **Data Structure:** Mapping data is stored in an array of objects: `{ id: 1, angle: 45, rssi: -60, rawSamples: [...] }`, allowing for "Undo" functionality and CSV export.
+
+*   **`style.css`**:
+    *   Implements a responsive Flexbox layout.
+    *   Includes a fully responsive Dark/Light mode theme system using CSS variables for grid lines and text colors.
+
+## 6. Setup & Usage
+
+1.  **Hardware:** Connect Particle Photon 2 via USB. Flash the `project.cpp` firmware.
+2.  **Software:** Open `index.html` in a Chrome/Edge browser (Web Serial support required).
+3.  **Operation:**
+    *   Click **CONNECT SERIAL**.
+    *   Wait for the system to `SCAN`. Select a network from the left panel.
+    *   Switch to **MANUAL MAPPING** tab.
+    *   Rotate device, input angle, and click **MEASURE**. Repeat for multiple angles.
+    *   Click **CALC SOURCE** to visualize the estimated vector.
+
+## 7. Code Design & Quality
+
+This section details the software architecture, design patterns, and specific technical implementations used in both the firmware and the web interface. The system is designed to be **modular**, **event-driven**, and **robust** against serial data fragmentation.
+
+### 7.1 Firmware Design: Finite State Machine (FSM)
+The Particle Photon 2 firmware is not designed as a linear script but as a **Finite State Machine**. This design ensures the device is always responsive to new serial commands, even when switching between modes.
+
+*   **Logic:** The `loop()` function checks `currentState` every cycle.
+*   **Non-Blocking Serial:** Incoming serial data is handled immediately at the start of `loop()`, allowing the user to send `STOP` even while the device is in `STATE_TRACKING`.
+
+```mermaid
+stateDiagram-v2
+    [*] --> STATE_IDLE
+    
+    STATE_IDLE --> STATE_SCANNING : Command SCAN
+    STATE_SCANNING --> STATE_IDLE : Scan Complete
+    
+    %% 这里用了 #58; 代替冒号，Draw.io 会把它渲染成 :
+    STATE_IDLE --> STATE_TRACKING : Command TRACK#58;SSID#58;CH
+    
+    STATE_TRACKING --> STATE_TRACKING : Loop (High Speed Sampling)
+    STATE_TRACKING --> STATE_IDLE : Command STOP
+    
+    note right of STATE_TRACKING
+      Optimized for speed:
+      Only scans specific channel
+      to maximize sample rate.
+    end note
+```
+
+### 7.2 Web Serial Implementation: The Pipeline Pattern
+A critical challenge in Web Serial is that data arrives in "chunks" that do not strictly align with line breaks. A chunk might contain `DATA:-60,1` (incomplete).
+
+To solve this, I implemented a **Stream Pipeline** pattern in `script.js`:
+1.  **Hardware Stream:** Raw bytes from USB.
+2.  **TextDecoder:** Converts bytes to UTF-8 strings.
+3.  **Line Buffer:** Accumulates strings until a newline character (`\n`) is found.
+4.  **Parser:** Validates the line and routes it to the UI.
+
+```mermaid
+graph LR
+    A[USB Hardware] -->|Raw Bytes| B(TextDecoderStream)
+    B -->|String Fragments| C{Line Buffer}
+    C -->|Incomplete Line| C
+    C -->|Complete Line '\n'| D[processLine Function]
+    D -->|Prefix: LIST| E[Update Network List]
+    D -->|Prefix: DATA| F[Update Charts]
+    D -->|Prefix: STATUS| G[Update Connection Icon]
+```
+
+### 7.3 WebUI Technical Implementation
+The frontend does not use heavy frameworks (like React or Vue) to ensure maximum performance for the serial read loop. Instead, it uses **Vanilla JavaScript** with direct DOM manipulation.
+
+#### A. Interactive Dial & Angle Snapping (Magnetic Interaction)
+One of the key UX features is the "Direction Dial" which allows users to input the angle of the device. To make this precise, I implemented an **Angle Snapping** algorithm.
+
+*   **Problem:** Mouse movements are continuous (e.g., 43.2°), but radar analysis works best with standard steps (e.g., 45°).
+*   **Solution:** The `setAngleFromEvent(e)` function converts Cartesian mouse coordinates to Polar coordinates and applies a "rounding mask."
+
+**Code Logic Snippet:**
+```javascript
+// 1. Calculate raw angle using Arctangent
+let rad = Math.atan2(mouseY - center_Y, mouseX - center_X);
+let deg = rad * (180 / Math.PI) + 90; // Adjust for 12 o'clock start
+
+// 2. Normalize negative angles (0 to 360 range)
+if (deg < 0) deg += 360;
+
+// 3. Apply Snapping (Quantization)
+// This rounds the angle to the nearest 22.5 degrees (16-point compass)
+const SNAP_STEP = 22.5;
+dialAngle = Math.round(deg / SNAP_STEP) * SNAP_STEP;
+```
+
+#### B. Radar Rendering Engine (Canvas 2D)
+The radar visualization is drawn dynamically on an HTML5 Canvas. This approach was chosen over CSS or SVG because Canvas handles high-frequency redraws (60fps) much more efficiently when plotting hundreds of points.
+
+*   **Coordinate Transformation:** The system stores data as `{angle, rssi}` (Polar). The renderer converts this to screen coordinates `(x, y)` relative to the canvas center.
+*   **Dynamic Scaling:** The drawing loop automatically detects the canvas size (`offsetWidth`) and resizes the grid, ensuring the radar looks correct whether the sidebar is collapsed or expanded.
+
+```mermaid
+flowchart TD
+    A[Start Draw Loop] --> B[Clear Canvas]
+    B --> C[Draw Grid Circles & Crosshair]
+    C --> D{Iterate Map Data}
+    D --> E[Normalize RSSI]
+    E --> F[Convert Polar to Cartesian]
+    F --> G[Draw Point]
+    G --> H{Is Mouse Hovering?}
+    H -- Yes --> I[Draw Highlight Ring & Tooltip]
+    H -- No --> D
+    D -->|End of List| J[Draw Predicted Vector Arrow]
+```
+
+### 7.4 Data Integrity & Scalability
+The application includes several features to ensure data quality:
+
+1.  **Filtering:** The firmware scanner returns many weak signals. The frontend includes logic to ignore signals weaker than -100dBm during the vector calculation phase to prevent "noise" from skewing the direction estimation.
+2.  **Sampling Averaging:** When the user clicks "MEASURE", the system does not take a single sample. Instead, it aggregates `N` samples (configurable via UI) and calculates the arithmetic mean before saving the data point. This acts as a low-pass filter against signal fluctuation.
 
 ```javascript
-// From calculateSource() in script.js
-let r = (d.angle-90)*Math.PI/180;
-sumSin += Math.sin(r)*w; // Accumulate y components
-sumCos += Math.cos(r)*w; // Accumulate x components
+// Averaging Logic Implementation
+function finishMeasurement() {
+    // Sum all collected samples and divide by count
+    let sum = currentSamples.reduce((a, b) => a + b, 0);
+    let avg = Math.round(sum / currentSamples.length);
+    
+    // Push the 'clean' averaged data to the main dataset
+    mapData.push({ ..., rssi: avg, ... });
+}
 ```
-*Note: The code uses `sumSin` for the y-component accumulation and `sumCos` for the x-component.*
-
-### 4. Resultant Vector & Direction Estimation
-The algorithm sums all individual vectors to find the resultant vector $\vec{R} = (\sum x_i, \sum y_i)$.
-The angle of this resultant vector represents the estimated direction of the signal source. We use the `atan2` function to find the angle and then reverse the rotation applied earlier.
-
-$$ \theta_{est} = \text{atan2}(\sum y_i, \sum x_i) \times \frac{180}{\pi} + 90 $$
-
-Finally, the angle is normalized to be within $[0, 360)$.
-
-```javascript
-// From calculateSource() in script.js
-let deg = Math.round(Math.atan2(sumSin,sumCos)*180/Math.PI + 90);
-if(deg<0) deg+=360;
-```
-
-This method is effective because strong signals (high RSSI) have exponentially higher weights, pulling the resultant vector significantly towards the source, while weaker reflections or side-lobes have minimal impact.
-
-## Test Environment
-
--   **Device Firmware Version**: photon2@6.3.3
