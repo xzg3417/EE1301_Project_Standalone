@@ -74,6 +74,7 @@
         body.light-mode .text-slate-400 { color: #475569 !important; }
         body.light-mode .text-slate-500 { color: #475569 !important; }
         body.light-mode .text-white { color: #0f172a !important; }
+        body.light-mode .text-slate-200 { color: #0f172a !important; } /* Fix for list items */
         body.light-mode .text-sky-300 { color: #0369a1 !important; }
         body.light-mode .btn { background: #f1f5f9; border-color: #cbd5e1; color: #334155; }
         body.light-mode .btn:hover { background: #fff; border-color: #0ea5e9; color: #0ea5e9; }
@@ -109,7 +110,7 @@
             <div class="flex gap-1 bg-slate-900 p-1 rounded border border-slate-700">
                 <button onclick="switchTab('live')" id="tab-live" class="px-4 py-1 text-xs font-bold rounded bg-indigo-600 text-white">LIVE MONITOR</button>
                 <button onclick="switchTab('map')" id="tab-map" class="px-4 py-1 text-xs font-bold rounded hover:bg-slate-700 text-slate-400">MANUAL MAPPING</button>
-                <button onclick="switchTab('wifi')" id="tab-wifi" class="px-4 py-1 text-xs font-bold rounded hover:bg-slate-700 text-slate-400">WIFI CONFIG</button>
+                <button onclick="switchTab('ping')" id="tab-ping" class="px-4 py-1 text-xs font-bold rounded hover:bg-slate-700 text-slate-400">PING TOOL</button>
             </div>
 
             <div class="flex gap-2">
@@ -124,7 +125,7 @@
             <span id="miniState" class="text-red-500 font-bold">OFFLINE</span>
             <span class="text-slate-600">|</span>
             <span class="text-slate-500">SSID:</span>
-            <span id="miniSSID" class="text-white truncate max-w-[100px]">--</span>
+            <span id="miniSSID" class="text-white truncate max-w-[300px]">--</span>
             <span class="text-slate-500">RSSI:</span>
             <span id="miniRSSI" class="text-white">--</span>
             <div class="w-px h-3 bg-slate-700 mx-1"></div>
@@ -254,41 +255,34 @@
                 </div>
             </div>
 
-            <!-- VIEW 3: WIFI CONFIG -->
-            <div id="view-wifi" class="tab-content gap-2 w-full h-full p-1">
-                <div class="w-1/4 min-w-[200px] panel overflow-hidden flex flex-col h-full">
-                    <div class="p-2 border-b border-slate-800 flex justify-between items-center bg-slate-900/50 shrink-0">
-                        <span class="text-xs font-bold text-slate-400">WIFI NETWORKS</span>
-                        <button id="scanBtnWifi" onclick="sendCommand('SCAN')" class="text-xs text-sky-500 hover:text-white disabled:opacity-50">[ REFRESH ]</button>
+            <!-- VIEW 3: PING TOOL -->
+            <div id="view-ping" class="tab-content gap-2 w-full h-full p-1">
+                <div class="w-full h-full panel flex flex-col p-4 gap-4">
+                    <div class="flex items-center justify-between border-b border-slate-800 pb-2">
+                        <h2 class="text-lg font-bold text-white">Ping Diagnostic Tool</h2>
+                        <div class="text-[10px] text-slate-500 font-mono">IPv4 ONLY</div>
                     </div>
-                    <div id="wifiList" class="flex-1 overflow-y-auto custom-scroll p-0"><div class="p-4 text-center text-xs text-slate-600 font-mono">> WAITING...</div></div>
-                </div>
-                <div class="flex-1 panel relative flex flex-col items-center justify-center p-8 gap-4">
-                    <div class="w-full max-w-md bg-slate-900 border border-slate-700 rounded p-4 flex flex-col gap-4">
-                        <div class="border-b border-slate-700 pb-2 mb-2">
-                            <h2 class="text-lg font-bold text-white">Join Network</h2>
-                            <p class="text-xs text-slate-400">Configure credentials for Photon 2</p>
-                        </div>
 
+                    <div class="flex gap-4 items-end bg-slate-900/30 p-4 rounded border border-slate-800">
                         <div>
-                            <label class="text-[10px] text-slate-500 uppercase font-bold tracking-wider mb-1 block">Selected SSID</label>
-                            <div id="wifiSelectedSSID" class="text-sm font-bold text-sky-400 bg-slate-800 p-2 rounded border border-slate-700">--</div>
+                            <label class="text-[10px] text-slate-400 uppercase font-bold tracking-wider mb-1 block">Target Host / IP</label>
+                            <input type="text" id="pingHost" class="dark-input w-64 text-sm font-mono" value="google.com">
                         </div>
-
                         <div>
-                            <label class="text-[10px] text-slate-500 uppercase font-bold tracking-wider mb-1 block">Security</label>
-                            <div id="wifiSelectedSec" class="text-xs text-slate-300 font-mono">--</div>
+                            <label class="text-[10px] text-slate-400 uppercase font-bold tracking-wider mb-1 block">Count</label>
+                            <input type="number" id="pingCount" class="dark-input w-20 text-sm font-mono" value="4" min="1" max="20">
                         </div>
-
-                        <div>
-                            <label class="text-[10px] text-slate-500 uppercase font-bold tracking-wider mb-1 block">Password</label>
-                            <input type="password" id="wifiPassInput" class="dark-input w-full text-sm" placeholder="Enter password...">
-                        </div>
-
-                        <button id="wifiConnectBtn" onclick="connectWiFi()" class="btn py-2 font-bold text-green-400 border-green-900 hover:bg-green-900/30 mt-2">CONNECT</button>
+                        <button onclick="startPing()" id="pingBtn" class="btn px-6 py-1.5 text-xs font-bold text-sky-400 border-sky-900 hover:bg-sky-900/30">START PING</button>
                     </div>
-                    <div class="text-[10px] text-slate-500 max-w-md text-center">
-                        Note: Device may need to restart to apply new network settings. Please observe the device LED status.
+
+                    <div class="flex-1 flex flex-col min-h-0 bg-black border border-slate-800 rounded overflow-hidden">
+                        <div class="p-2 bg-slate-900 text-[10px] font-bold text-slate-400 flex justify-between items-center">
+                            <span>PING OUTPUT</span>
+                            <button onclick="document.getElementById('pingConsole').innerHTML=''" class="hover:text-white">CLEAR</button>
+                        </div>
+                        <div id="pingConsole" class="flex-1 overflow-y-auto custom-scroll p-4 font-mono text-xs text-slate-300 select-text">
+                            <div class="text-slate-600">> Ready to ping...</div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -326,14 +320,10 @@
 
         // --- DOM Elements ---
         const els = {
-            tabs: { live: document.getElementById('tab-live'), map: document.getElementById('tab-map'), wifi: document.getElementById('tab-wifi') },
-            views: { live: document.getElementById('view-live'), map: document.getElementById('view-map'), wifi: document.getElementById('view-wifi') },
+            tabs: { live: document.getElementById('tab-live'), map: document.getElementById('tab-map'), ping: document.getElementById('tab-ping') },
+            views: { live: document.getElementById('view-live'), map: document.getElementById('view-map'), ping: document.getElementById('view-ping') },
             panels: { left: document.getElementById('panel-left'), center: document.getElementById('panel-center'), right: document.getElementById('panel-right'), terminal: document.getElementById('panel-terminal') },
             list: document.getElementById('networkList'),
-            wifiList: document.getElementById('wifiList'),
-            wifiSSID: document.getElementById('wifiSelectedSSID'),
-            wifiSec: document.getElementById('wifiSelectedSec'),
-            wifiPass: document.getElementById('wifiPassInput'),
             liveChart: document.getElementById('signalChart'),
             disp: { rssi: document.getElementById('dispRSSI'), rate: document.getElementById('dispRate') },
             dial: document.getElementById('dialCanvas'),
@@ -442,7 +432,7 @@
         // --- TABS ---
         window.switchTab = (tab) => {
             currentTab = tab;
-            ['live', 'map', 'wifi'].forEach(t => {
+            ['live', 'map', 'ping'].forEach(t => {
                 const btn = els.tabs[t], view = els.views[t];
                 if(t === tab) {
                     btn.className = "px-4 py-1 text-xs font-bold rounded bg-indigo-600 text-white";
@@ -456,22 +446,16 @@
             else if(tab === 'map') { setTimeout(() => { drawDial(); resizeRadar(); }, 50); if(mapTarget.ssid && isConnected) sendCommand(`TRACK:${mapTarget.ssid}:${mapTarget.channel}`); else if(isConnected) sendCommand("STOP"); }
         };
 
-        let selectedWifi = { ssid: "", sec: "" };
-
-        window.connectWiFi = async () => {
+        window.startPing = () => {
             if(!isConnected) { alert("Please connect serial first."); return; }
-            if(!selectedWifi.ssid) { alert("Please select a network."); return; }
+            const host = document.getElementById('pingHost').value.trim() || "google.com";
+            const count = document.getElementById('pingCount').value || 4;
 
-            const pass = els.wifiPass.value;
-            alert("Sending credentials. Device may restart.");
+            const consoleEl = document.getElementById('pingConsole');
+            consoleEl.innerHTML += `<div class="text-yellow-400 mt-2">> Pinging ${host} [x${count}]...</div>`;
+            consoleEl.scrollTop = consoleEl.scrollHeight;
 
-            await sendCommand(`SET_SSID:${selectedWifi.ssid}`);
-            await new Promise(r => setTimeout(r, 100)); // Small delay
-            await sendCommand(`SET_PASS:${pass}`);
-            await new Promise(r => setTimeout(r, 100));
-            await sendCommand("DO_CONNECT");
-
-            els.wifiPass.value = "";
+            sendCommand(`PING:${host}:${count}`);
         };
 
         // --- SERIAL ---
@@ -519,7 +503,19 @@
                 if(els.wifiList) els.wifiList.innerHTML = "";
                 log("SYS", "SCANNING...");
             }
-            else if(line.startsWith("LOG:")) log("DEV", line.substring(4));
+            else if(line.startsWith("LOG:")) {
+                const msg = line.substring(4);
+                // If it's a PING log, redirect to ping console
+                if(msg.startsWith("PING:")) {
+                    const pingCon = document.getElementById('pingConsole');
+                    const pingMsg = msg.substring(5);
+                    if(pingCon) {
+                        pingCon.innerHTML += `<div>${pingMsg}</div>`;
+                        pingCon.scrollTop = pingCon.scrollHeight;
+                    }
+                }
+                log("DEV", msg);
+            }
         }
         
         function addNetwork(ssid, rssi, ch, bssid, sec) {
@@ -529,14 +525,6 @@
                 els.disp.rssi.innerText="--";
                 els.mapTarget.innerText = ssid;
                 if(isConnected) sendCommand(`TRACK:${ssid}:${ch}`);
-                // switchTab('live'); // Removed to prevent forced switching
-            });
-
-            // Add to WiFi List
-            createListItem(els.wifiList, ssid, rssi, ch, sec, () => {
-                selectedWifi = { ssid, sec: sec || "UNKNOWN" };
-                els.wifiSSID.innerText = ssid;
-                els.wifiSec.innerText = selectedWifi.sec;
             });
         }
 
@@ -546,7 +534,7 @@
             d.className="list-item cursor-pointer group";
             d.innerHTML=`
                 <div class="flex justify-between mb-1">
-                    <span class="font-bold text-slate-200 truncate w-32">${ssid}</span>
+                    <span class="font-bold text-slate-200 truncate w-64">${ssid}</span>
                     <span class="text-sky-400 font-mono text-xs">${rssi}dBm</span>
                 </div>
                 <div class="text-[10px] text-slate-500 font-mono flex justify-between">
