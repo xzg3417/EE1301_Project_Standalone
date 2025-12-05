@@ -1,8 +1,4 @@
 # Particle Compile Action Workflow
-# This workflow uses the Particle compile-action to compile Particle application firmware.
-# Make sure to set the particle-platform-name for your project.
-# For complete documentation, please refer to https://github.com/particle-iot/compile-action
-
 name: Particle Compile
 
 on:
@@ -23,13 +19,15 @@ jobs:
         id: compile
         uses: particle-iot/compile-action@v1
         with:
-          # Set the particle-platform-name to the platform you're targeting.
-          # Allowed values: core, photon, p1, electron, argon, boron, xenon, esomx, bsom, b5som, tracker, trackerm, p2, msom
+          # 1. 设置平台：Photon 2 的代号就是 'p2'
           particle-platform-name: 'p2'
+          # 2. 指定 Device OS 版本：这里填入你需要的版本
+          device-os-version: '6.3.3'
 
-      # Optional: Upload compiled firmware as an artifact on GitHub.
+      # Upload compiled firmware as an artifact on GitHub.
       - name: Upload Firmware as Artifact
-        uses: actions/upload-artifact@v3
+        # 3. 修复报错：这里从 v3 改成了 v4
+        uses: actions/upload-artifact@v4
         with:
           name: firmware-artifact
           path: |
