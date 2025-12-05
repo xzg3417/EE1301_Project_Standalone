@@ -1,196 +1,76 @@
-/*
- * Project: Web_Serial_Radar_v10_Mapping_Engine
- * Hardware: Particle Photon 2
- * Description: Stable scanning backend for Semi-Automated Mapping WebUI.
- */
-
 #include "Particle.h"
+#include <vector>
 
-// --- 函数声明 ---
-void performFullScan();
-void performStableTracking();
-void sendLog(String level, String msg);
-void reportDeviceStatus();
-String macToString(const uint8_t* mac);
-String securityToString(int security);
+// 【关键】使用手动模式，完全接管网络控制权
+// 不会自动连接 Particle Cloud，排除云端干扰
+SYSTEM_MODE(MANUAL);
+SYSTEM_THREAD(ENABLED);
 
-// 状态定义
-enum State {
-  STATE_IDLE,
-  STATE_SCANNING,
-  STATE_TRACKING
-};
+const unsigned long SAMPLE_INTERVAL_MS = 20; // 尝试推到极限 50Hz
+unsigned long lastSampleTime = 0;
 
-State currentState = STATE_IDLE;
-
-// 追踪目标信息
-String targetSSID = "";
-int targetChannel = 0;
-
-WiFiAccessPoint aps[50];
-unsigned long lastUpdate = 0;
-unsigned long lastStatusReport = 0; 
+// 还是需要 UDP 刺激
+UDP udp;
+IPAddress gatewayIP;
+unsigned long lastTriggerTime = 0;
 
 void setup() {
-  Serial.begin(115200);
-  WiFi.selectAntenna(ANT_EXTERNAL);
-  delay(2000);
-  sendLog("INFO", "System Booted. Radar Engine v10.");
+    Serial.begin(115200);
+    Serial.println("System Starting in MANUAL mode...");
+    
+    // 1. 显式开启 Wi-Fi
+    WiFi.on();
+    WiFi.clearCredentials(); // (可选) 如果需要清除旧数据
+    
+    // 2. 这里请填入您的 Wi-Fi 信息，确保连接最快建立
+    // 如果设备已经存有密码，可以直接调用 WiFi.connect()
+    if (!WiFi.hasCredentials()) {
+        WiFi.setCredentials("Hiveton-H5000M", "happy@1001");
+    }
+    
+    WiFi.connect();
+    
+    Serial.println("Connecting to WiFi...");
+    while(!WiFi.ready()) {
+        Serial.print(".");
+        delay(100);
+    }
+    Serial.println("\nWiFi Connected!");
+    
+    gatewayIP = WiFi.gatewayIP();
+    udp.begin(8888);
 }
 
 void loop() {
-  // 1. 处理串口指令
-  if (Serial.available() > 0) {
-    String cmd = Serial.readStringUntil('\n');
-    cmd.trim();
+    unsigned long currentMillis = millis();
 
-    if (cmd == "SCAN") {
-      sendLog("INFO", "Command: FULL SCAN");
-      currentState = STATE_SCANNING;
-    } 
-    else if (cmd.startsWith("TRACK:")) {
-      int firstColon = cmd.indexOf(':');
-      int lastColon = cmd.lastIndexOf(':');
-      if (lastColon > firstColon) {
-        targetSSID = cmd.substring(firstColon + 1, lastColon);
-        targetChannel = cmd.substring(lastColon + 1).toInt();
-        sendLog("INFO", "TARGET LOCKED: [" + targetSSID + "]");
-        currentState = STATE_TRACKING;
-      }
+    // 疯狂发包模式 (每 50ms)
+    if (currentMillis - lastTriggerTime >= 50) {
+        lastTriggerTime = currentMillis;
+        if (WiFi.ready()) {
+            udp.beginPacket(gatewayIP, 8888);
+            udp.write((uint8_t)0xFF); 
+            udp.endPacket();
+        }
     }
-    else if (cmd == "GET_STATUS") {
-      reportDeviceStatus();
+
+    if (currentMillis - lastSampleTime >= SAMPLE_INTERVAL_MS) {
+        lastSampleTime = currentMillis;
+        
+        if (WiFi.ready()) {
+            // 直接读取，不做滤波，看最原始的反应
+            int rssi = WiFi.RSSI().getStrengthValue();
+            
+            // 为了调试，我们只打印发生变化的数值
+            // 或者打印高频数据看是否有重复
+            static int lastRssi = 0;
+            if (rssi != lastRssi) {
+                Serial.printf("CHANGE: %lu ms, RSSI: %d dBm\n", currentMillis, rssi);
+                lastRssi = rssi;
+            } else {
+                // 如果您想看重复频率，取消下面这行的注释
+                 Serial.printf("SAME:   %lu ms, RSSI: %d dBm\n", currentMillis, rssi);
+            }
+        }
     }
-    else if (cmd == "STOP") {
-      sendLog("INFO", "Command: STOP");
-      currentState = STATE_IDLE;
-    }
-  }
-
-  // 2. 状态机逻辑
-  switch (currentState) {
-    case STATE_SCANNING:
-      performFullScan();
-      currentState = STATE_IDLE; 
-      break;
-
-    case STATE_TRACKING:
-      // 保持 200ms 的最小间隔，给 WiFi 模组喘息时间
-      if (millis() - lastUpdate > 200) { 
-        performStableTracking();
-        lastUpdate = millis();
-      }
-      break;
-
-    case STATE_IDLE:
-      break;
-  }
-
-  // 3. 定时报告设备状态 (3秒一次)
-  if (millis() - lastStatusReport > 3000) {
-    reportDeviceStatus();
-    lastStatusReport = millis();
-  }
 }
-
-// 报告设备状态 (使用逗号分隔，避免 MAC 地址冲突)
-void reportDeviceStatus() {
-  if (WiFi.ready()) {
-    Serial.print("STATUS:DEVICE:CONNECTED,"); 
-    Serial.print(WiFi.SSID());
-    Serial.print(",");
-    Serial.print(WiFi.localIP());
-    Serial.print(",");
-    
-    // RSSI 估算转换 (0-100% -> -90dBm to -30dBm)
-    WiFiSignal sig = WiFi.RSSI();
-    int rssi = (int)((sig.getStrength() * 0.6) - 90);
-    Serial.print(rssi);
-    Serial.print(",");
-    
-    Serial.print(WiFi.gatewayIP());
-    Serial.print(",");
-    Serial.print(WiFi.subnetMask());
-    Serial.print(",");
-    
-    uint8_t mac[6];
-    WiFi.macAddress(mac);
-    Serial.println(macToString(mac)); 
-    
-  } else {
-    Serial.println("STATUS:DEVICE:DISCONNECTED");
-  }
-}
-
-void sendLog(String level, String msg) {
-  Serial.print("LOG:"); Serial.print(level); Serial.print(":"); Serial.println(msg);
-}
-
-void performFullScan() {
-  Serial.println("STATUS:SCAN_START");
-  sendLog("INFO", "Scanning spectrum...");
-  int found = WiFi.scan(aps, 50);
-  if (found < 0) {
-    sendLog("ERROR", "Scan err: " + String(found));
-    Serial.println("STATUS:SCAN_END");
-    return;
-  }
-  
-  for (int i = 0; i < found; i++) {
-    // 协议: LIST:SSID,RSSI,CHANNEL,BSSID,SECURITY
-    Serial.print("LIST:");
-    Serial.print(aps[i].ssid);
-    Serial.print(",");
-    Serial.print(aps[i].rssi);
-    Serial.print(",");
-    Serial.print(aps[i].channel);
-    Serial.print(",");
-    Serial.print(macToString(aps[i].bssid));
-    Serial.print(",");
-    Serial.println(securityToString(aps[i].security));
-  }
-  Serial.println("STATUS:SCAN_END");
-}
-
-void performStableTracking() {
-  // 核心追踪逻辑：全信道扫描
-  int found = WiFi.scan(aps, 50);
-  
-  int max_rssi = -120;
-  bool found_target = false;
-  String currentBSSID = "";
-  int currentChannel = 0;
-
-  for (int i = 0; i < found; i++) {
-    if (String(aps[i].ssid) == targetSSID) {
-      found_target = true;
-      if (aps[i].rssi > max_rssi) {
-        max_rssi = aps[i].rssi;
-        currentBSSID = macToString(aps[i].bssid);
-        currentChannel = aps[i].channel;
-      }
-    }
-  }
-
-  if (found_target) {
-    // DATA:RSSI,CHANNEL,BSSID
-    Serial.print("DATA:");
-    Serial.print(max_rssi);
-    Serial.print(",");
-    Serial.print(currentChannel);
-    Serial.print(",");
-    Serial.println(currentBSSID);
-  } else {
-    // 没扫到 (可能信号太弱或信标帧丢失)
-    // 仍然发送心跳，方便前端判断连接状态
-    Serial.println("DATA:-120,0,SCANNING...");
-  }
-}
-
-String macToString(const uint8_t* mac) {
-  char buf[20];
-  snprintf(buf, sizeof(buf), "%02X:%02X:%02X:%02X:%02X:%02X", 
-           mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
-  return String(buf);
-}
-
