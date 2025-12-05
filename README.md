@@ -1,4 +1,4 @@
-# Signal Hunter v21.1: IoT Radar Mapping Engine
+# Photon 2 Wi-Fi Signal Mapper v0.0
 
 **Demo:** https://xzg3417.github.io/EE1301_Project_Standalone/
 
