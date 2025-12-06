@@ -536,3 +536,63 @@ function drawLiveChart() {
 }
 window.addEventListener('resize', () => { resizeLiveChart(); if(currentTab==='map') { drawDial(); resizeRadar(); } });
 switchTab('live');
+
+// --- Export for Testing ---
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports = {
+        els,
+        getTheme,
+        processLine,
+        addNetwork,
+        handleMapData,
+        calculateSource,
+        getQuality,
+        mapData,
+        liveChartData,
+        getMapData: () => mapData, // Getter to access updated reference
+        setMapData: (data) => { mapData = data; },
+        getLiveChartData: () => liveChartData,
+        resetState: () => {
+             mapData.length = 0;
+             measurementID = 1;
+             predictedAngle = null;
+        },
+        setDialAngle: (angle) => { dialAngle = angle; },
+        setIsMeasuring: (val) => { isMeasuring = val; },
+        setMapTarget: (ssid, ch) => { mapTarget.ssid = ssid; mapTarget.channel = ch; },
+        setRequiredSamples: (val) => { requiredSamples = val; },
+        resetCurrentSamples: () => { currentSamples = []; },
+        updateTable // export updateTable so we can mock it or check it
+    };
+}
+
+// Additional exports for testing
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports.setWriter = (w) => { writer = w; };
+    module.exports.setIsConnected = (val) => { isConnected = val; };
+}
+
+// Additional exports for testing global functions
+if (typeof module !== 'undefined' && module.exports) {
+    // We attach these to module.exports so we can call them in tests
+    // But we also need to make sure they are available if the test calls window.switchTab?
+    // The previous tests called window.switchTab. I should fix the tests to call script.switchTab.
+    // However, if the app relies on them being on window (e.g. onclick="switchTab()"),
+    // then in the browser they are on window because they are top level.
+    // In Jest, we can manually attach them to window if we want to simulate that.
+
+    module.exports.switchTab = typeof switchTab !== 'undefined' ? switchTab : undefined;
+    module.exports.generateTestData = typeof generateTestData !== 'undefined' ? generateTestData : undefined;
+    module.exports.startPing = typeof startPing !== 'undefined' ? startPing : undefined;
+    module.exports.exportCSV = typeof exportCSV !== 'undefined' ? exportCSV : undefined;
+    module.exports.importCSV = typeof importCSV !== 'undefined' ? importCSV : undefined;
+
+    // Also attach to window for tests that rely on window.switchTab (if any remain)
+    if (typeof window !== 'undefined') {
+        if (typeof switchTab !== 'undefined') window.switchTab = switchTab;
+        if (typeof generateTestData !== 'undefined') window.generateTestData = generateTestData;
+        if (typeof startPing !== 'undefined') window.startPing = startPing;
+        if (typeof exportCSV !== 'undefined') window.exportCSV = exportCSV;
+        if (typeof importCSV !== 'undefined') window.importCSV = importCSV;
+    }
+}
