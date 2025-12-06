@@ -15,7 +15,7 @@ let isLightMode = true;
 const els = {
     tabs: { live: document.getElementById('tab-live'), map: document.getElementById('tab-map'), wifi: document.getElementById('tab-wifi') },
     views: { live: document.getElementById('view-live'), map: document.getElementById('view-map'), wifi: document.getElementById('view-wifi') },
-    panels: { left: document.getElementById('panel-left'), center: document.getElementById('panel-center'), right: document.getElementById('panel-right'), terminal: document.getElementById('panel-terminal') },
+    panels: { left: document.getElementById('panel-left'), center: document.getElementById('panel-center'), right: document.getElementById('panel-right'), terminal: document.getElementById('panel-terminal'), liveList: document.getElementById('panel-live-list'), liveMain: document.getElementById('panel-live-main') },
     list: document.getElementById('networkList'),
     liveChart: document.getElementById('signalChart'),
     disp: { rssi: document.getElementById('dispRSSI'), rate: document.getElementById('dispRate') },
@@ -79,10 +79,15 @@ function makeResizable(resizer, type, el1, el2, el3) {
     const onMouseMove = (e) => {
         if (type === 'h') {
             const dx = e.clientX - startPos;
+            if (!el1.parentElement) return;
             const parentW = el1.parentElement.offsetWidth;
-            if(resizer.id === 'resizer-1') {
+            if(resizer.id === 'resizer-1' || resizer.id === 'resizer-live') {
                 const newW = ((startSize1 + dx) / parentW) * 100;
-                if(newW > 10 && newW < 50) { el1.style.width = newW + '%'; drawDial(); resizeRadar(); }
+                if(newW > 10 && newW < 80) {
+                    el1.style.width = newW + '%';
+                    if (resizer.id === 'resizer-1') { drawDial(); resizeRadar(); }
+                    if (resizer.id === 'resizer-live') { resizeLiveChart(); }
+                }
             } else {
                 const newW = ((startSize3 - dx) / parentW) * 100;
                 if(newW > 10 && newW < 50) { el3.style.width = newW + '%'; resizeRadar(); }
@@ -98,14 +103,27 @@ function makeResizable(resizer, type, el1, el2, el3) {
     };
     const onMouseUp = () => { document.removeEventListener('mousemove', onMouseMove); document.removeEventListener('mouseup', onMouseUp); };
     resizer.addEventListener('mousedown', (e) => {
+        console.log(`Resizer mousedown: ${resizer.id}`);
         startPos = type === 'h' ? e.clientX : e.clientY;
-        if(type === 'h') { startSize1 = el1.offsetWidth; startSize3 = el3.offsetWidth; } else { startSize1 = el1.offsetHeight; }
+        if(type === 'h') {
+            startSize1 = el1 ? el1.offsetWidth : 0;
+            startSize3 = el3 ? el3.offsetWidth : 0;
+        } else {
+            startSize1 = el1 ? el1.offsetHeight : 0;
+        }
         document.addEventListener('mousemove', onMouseMove); document.addEventListener('mouseup', onMouseUp);
     });
 }
-makeResizable(document.getElementById('resizer-1'), 'h', els.panels.left, els.panels.center, els.panels.right);
-makeResizable(document.getElementById('resizer-2'), 'h', els.panels.left, els.panels.center, els.panels.right);
-makeResizable(document.getElementById('resizer-terminal'), 'v', els.panels.terminal);
+// Ensure elements are fetched correctly even if index.html was modified
+const resizer1 = document.getElementById('resizer-1');
+const resizer2 = document.getElementById('resizer-2');
+const resizerLive = document.getElementById('resizer-live');
+const resizerTerm = document.getElementById('resizer-terminal');
+
+if (resizer1) makeResizable(resizer1, 'h', els.panels.left, els.panels.center, els.panels.right);
+if (resizer2) makeResizable(resizer2, 'h', els.panels.left, els.panels.center, els.panels.right);
+if (resizerLive) makeResizable(resizerLive, 'h', els.panels.liveList, els.panels.liveMain);
+if (resizerTerm) makeResizable(resizerTerm, 'v', els.panels.terminal);
 
 // --- Table Column Resizing Logic ---
 document.querySelectorAll('.col-resizer').forEach(resizer => {
@@ -536,3 +554,20 @@ function drawLiveChart() {
 }
 window.addEventListener('resize', () => { resizeLiveChart(); if(currentTab==='map') { drawDial(); resizeRadar(); } });
 switchTab('live');
+
+// --- Zoom Logic ---
+let currentZoom = 1.0;
+const zoomOutBtn = document.getElementById('zoomOutBtn');
+const zoomInBtn = document.getElementById('zoomInBtn');
+
+function updateZoom() {
+    document.documentElement.style.fontSize = (16 * currentZoom) + 'px';
+    setTimeout(() => { resizeLiveChart(); resizeRadar(); drawDial(); }, 100);
+}
+
+if(zoomOutBtn) zoomOutBtn.addEventListener('click', () => {
+    if(currentZoom > 0.5) { currentZoom -= 0.1; updateZoom(); }
+});
+if(zoomInBtn) zoomInBtn.addEventListener('click', () => {
+    if(currentZoom < 2.0) { currentZoom += 0.1; updateZoom(); }
+});

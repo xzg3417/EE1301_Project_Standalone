@@ -86,3 +86,101 @@ body.light-mode #radarTooltip { background-color: #ffffff; border-color: #cbd5e1
 body.light-mode #logConsole { color: #334155 !important; }
 body.light-mode #logConsole .text-sky-600 { color: #0369a1 !important; }
 body.light-mode #logConsole .text-slate-600 { color: #64748b !important; }
+
+/* Additional Light Mode Overrides */
+body.light-mode .text-sky-400 { color: #0284c7 !important; }
+body.light-mode .text-indigo-400 { color: #4f46e5 !important; }
+body.light-mode .text-green-400 { color: #16a34a !important; }
+body.light-mode .text-yellow-400 { color: #d97706 !important; }
+body.light-mode .text-red-400 { color: #dc2626 !important; }
+body.light-mode .text-sky-500 { color: #0284c7 !important; }
+
+body.light-mode .bg-slate-900\/50 { background-color: #f1f5f9 !important; border-color: #e2e8f0; }
+body.light-mode .border-slate-800 { border-color: #cbd5e1 !important; }
+body.light-mode .border-slate-700 { border-color: #cbd5e1 !important; }
+
+body.light-mode .highlight { color: #0284c7; text-shadow: none; }
+
+/* --- Orientation Optimization --- */
+@media (max-width: 768px), (orientation: portrait) {
+    /* Stack Header */
+    header > div { flex-wrap: wrap; gap: 8px; justify-content: center; }
+
+    /* Live View Stack */
+    #view-live { flex-direction: column !important; }
+    #panel-live-list { width: 100% !important; height: 35% !important; min-height: 150px; }
+    #panel-live-main { width: 100% !important; height: auto !important; flex: 1; }
+    #resizer-live { display: none !important; }
+
+    /* Map View Stack */
+    #view-map { flex-direction: column !important; overflow-y: auto; }
+    #panel-left { width: 100% !important; height: auto !important; min-height: 300px; flex: none; order: 2; }
+    #panel-center { width: 100% !important; height: 300px !important; flex: none; order: 1; }
+    #panel-right { width: 100% !important; height: 200px !important; flex: none; order: 3; }
+    #resizer-1, #resizer-2 { display: none !important; }
+}
+
+/* --- Fix Live View Resizer --- */
+#resizer-live {
+    cursor: col-resize;
+    z-index: 50; /* Ensure it's on top */
+    position: relative; /* Make sure it's positioned correctly in flex */
+}
+
+/* --- Fix Readability for Manual Mapping in Light Mode --- */
+body.light-mode #radarModeBtn {
+    background-color: #e2e8f0;
+    color: #0f172a;
+    border-color: #cbd5e1;
+}
+body.light-mode #radarModeBtn:hover {
+    background-color: #cbd5e1;
+}
+
+/* Fix table sub-row raw data pills */
+body.light-mode .sub-row .bg-slate-800 {
+    background-color: #e2e8f0 !important;
+    color: #334155 !important;
+    border: 1px solid #cbd5e1;
+}
+body.light-mode .sub-row .text-slate-300 {
+    color: #334155 !important;
+}
+
+/* --- Improve Zoom UI --- */
+/* Remove default button styles for zoom if needed */
+#zoomOutBtn, #zoomInBtn {
+    transition: color 0.2s;
+}
+
+/* --- Light Mode Zoom UI Overrides --- */
+body.light-mode #zoomOutBtn,
+body.light-mode #zoomInBtn {
+    color: #475569; /* text-slate-600 */
+}
+body.light-mode #zoomOutBtn:hover,
+body.light-mode #zoomInBtn:hover {
+    color: #0284c7; /* text-sky-600 */
+    background-color: #f1f5f9; /* bg-slate-100 */
+}
+body.light-mode .bg-slate-800 {
+    /* Target the zoom container specifically if needed, but .bg-slate-800 is already overridden in light mode to be #e2e8f0 which is fine.
+       However, we want a slightly different look for the zoom container pill in light mode.
+    */
+}
+/* Specific target for zoom container if we want to customize it more in light mode */
+body.light-mode .flex.items-center.bg-slate-800.rounded-full.border.border-slate-700 {
+    background-color: #ffffff !important;
+    border-color: #cbd5e1 !important;
+}
+
+/* Ensure resizer-live is interactive */
+#resizer-live {
+    pointer-events: auto !important;
+    display: block !important;
+    min-width: 6px;
+    background: transparent;
+}
+#resizer-live:hover {
+    background: #38bdf8;
+}

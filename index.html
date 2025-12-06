@@ -33,7 +33,15 @@
                     class="px-4 py-1 text-xs font-bold rounded hover:bg-slate-700 text-slate-400">PING TOOL</button>
             </div>
 
-            <div class="flex gap-2">
+            <div class="flex gap-2 items-center">
+                <div class="flex items-center mr-2 bg-slate-800 rounded-full border border-slate-700 p-0.5 shadow-sm">
+                    <button id="zoomOutBtn" class="w-6 h-6 rounded-full flex items-center justify-center text-slate-400 hover:text-white hover:bg-slate-700 transition-colors font-bold text-sm">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                    </button>
+                    <button id="zoomInBtn" class="w-6 h-6 rounded-full flex items-center justify-center text-slate-400 hover:text-white hover:bg-slate-700 transition-colors font-bold text-sm">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                    </button>
+                </div>
                 <button id="themeBtn" class="btn px-3 py-1 text-xs text-slate-600 font-bold border-slate-400">🌙
                     MODE</button>
                 <button id="connectBtn" class="btn px-4 py-1 text-xs text-sky-400 font-bold border-sky-900">CONNECT
@@ -62,8 +70,8 @@
         <div class="flex-1 overflow-hidden relative">
 
             <!-- VIEW 1: LIVE MONITOR -->
-            <div id="view-live" class="tab-content active gap-2 w-full h-full p-1">
-                <div class="w-1/4 min-w-[200px] panel overflow-hidden flex flex-col h-full">
+            <div id="view-live" class="tab-content active w-full h-full p-1">
+                <div id="panel-live-list" class="w-1/4 min-w-[200px] panel overflow-hidden flex flex-col h-full">
                     <div
                         class="p-2 border-b border-slate-800 flex justify-between items-center bg-slate-900/50 shrink-0">
                         <span class="text-xs font-bold text-slate-400">NETWORKS</span>
@@ -74,7 +82,10 @@
                         <div class="p-4 text-center text-xs text-slate-600 font-mono">> WAITING...</div>
                     </div>
                 </div>
-                <div class="flex-1 flex flex-col gap-2 h-full overflow-hidden">
+
+                <div class="resizer-v" id="resizer-live"></div>
+
+                <div id="panel-live-main" class="flex-1 flex flex-col gap-2 h-full overflow-hidden">
                     <div class="grid grid-cols-4 gap-2 h-20 shrink-0">
                         <div class="col-span-2 data-box flex flex-col justify-center">
                             <div class="data-label">Live RSSI</div>
