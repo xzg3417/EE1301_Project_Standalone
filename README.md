@@ -15,6 +15,8 @@
 **TODO**
 
 - html light/dark color scheme
+- button & code
+- circuit diagram [Cirkit Designer IDE](https://app.cirkitdesigner.com/project/13b6fb36-6e30-4229-a311-8fd118ea0a41)
 - description
 
 ## 1. Project Overview
