@@ -48,14 +48,14 @@ const COLORS = {
 };
 
 // Toggle Raw Data logging
-if(els.chkRaw) els.chkRaw.addEventListener('change', (e) => showRaw = e.target.checked);
+if (els.chkRaw) els.chkRaw.addEventListener('change', (e) => showRaw = e.target.checked);
 // Toggle Log display
-if(els.chkLog) els.chkLog.addEventListener('change', (e) => showLogs = e.target.checked);
+if (els.chkLog) els.chkLog.addEventListener('change', (e) => showLogs = e.target.checked);
 
 // Toggle Theme (Light/Dark)
-if(els.themeBtn) els.themeBtn.addEventListener('click', () => {
+if (els.themeBtn) els.themeBtn.addEventListener('click', () => {
     isLightMode = !isLightMode;
-    if(isLightMode) {
+    if (isLightMode) {
         document.body.classList.add('light-mode');
         els.themeBtn.innerText = "🌙 MODE";
         els.themeBtn.classList.replace('text-yellow-500', 'text-slate-600');
@@ -81,21 +81,21 @@ function makeResizable(resizer, type, el1, el2, el3) {
             const dx = e.clientX - startPos;
             if (!el1.parentElement) return;
             const parentW = el1.parentElement.offsetWidth;
-            if(resizer.id === 'resizer-1' || resizer.id === 'resizer-live') {
+            if (resizer.id === 'resizer-1' || resizer.id === 'resizer-live') {
                 const newW = ((startSize1 + dx) / parentW) * 100;
-                if(newW > 10 && newW < 80) {
+                if (newW > 10 && newW < 80) {
                     el1.style.width = newW + '%';
                     if (resizer.id === 'resizer-1') { drawDial(); resizeRadar(); }
                     if (resizer.id === 'resizer-live') { resizeLiveChart(); }
                 }
             } else {
                 const newW = ((startSize3 - dx) / parentW) * 100;
-                if(newW > 10 && newW < 50) { el3.style.width = newW + '%'; resizeRadar(); }
+                if (newW > 10 && newW < 50) { el3.style.width = newW + '%'; resizeRadar(); }
             }
         } else {
             const dy = startPos - e.clientY;
             const newH = startSize1 + dy;
-            if(newH > 40 && newH < window.innerHeight * 0.6) {
+            if (newH > 40 && newH < window.innerHeight * 0.6) {
                 el1.style.height = newH + 'px';
                 resizeLiveChart(); resizeRadar();
             }
@@ -105,7 +105,7 @@ function makeResizable(resizer, type, el1, el2, el3) {
     resizer.addEventListener('mousedown', (e) => {
         console.log(`Resizer mousedown: ${resizer.id}`);
         startPos = type === 'h' ? e.clientX : e.clientY;
-        if(type === 'h') {
+        if (type === 'h') {
             startSize1 = el1 ? el1.offsetWidth : 0;
             startSize3 = el3 ? el3.offsetWidth : 0;
         } else {
@@ -134,7 +134,7 @@ document.querySelectorAll('.col-resizer').forEach(resizer => {
         resizer.classList.add('resizing');
         const onColMove = (em) => {
             const w = startW + (em.clientX - startX);
-            if(w > 20) th.style.width = w + 'px';
+            if (w > 20) th.style.width = w + 'px';
         };
         const onColUp = () => {
             document.removeEventListener('mousemove', onColMove); document.removeEventListener('mouseup', onColUp);
@@ -150,7 +150,7 @@ window.switchTab = (tab) => {
     currentTab = tab;
     ['live', 'map', 'wifi'].forEach(t => {
         const btn = els.tabs[t], view = els.views[t];
-        if(t === tab) {
+        if (t === tab) {
             btn.className = "px-4 py-1 text-xs font-bold rounded bg-indigo-600 text-white";
             view.style.display = 'flex'; view.classList.add('active');
         } else {
@@ -158,12 +158,12 @@ window.switchTab = (tab) => {
             view.style.display = 'none'; view.classList.remove('active');
         }
     });
-    if(tab === 'live') { setTimeout(resizeLiveChart, 50); if(liveTarget.ssid && isConnected) sendCommand(`TRACK:${liveTarget.ssid}:${liveTarget.channel}`); }
-    else if(tab === 'map') { setTimeout(() => { drawDial(); resizeRadar(); }, 50); if(mapTarget.ssid && isConnected) sendCommand(`TRACK:${mapTarget.ssid}:${mapTarget.channel}`); else if(isConnected) sendCommand("STOP"); }
+    if (tab === 'live') { setTimeout(resizeLiveChart, 50); if (liveTarget.ssid && isConnected) sendCommand(`TRACK:${liveTarget.ssid}:${liveTarget.channel}`); }
+    else if (tab === 'map') { setTimeout(() => { drawDial(); resizeRadar(); }, 50); if (mapTarget.ssid && isConnected) sendCommand(`TRACK:${mapTarget.ssid}:${mapTarget.channel}`); else if (isConnected) sendCommand("STOP"); }
 };
 
 window.startPing = () => {
-    if(!isConnected) { alert("Please connect serial first."); return; }
+    if (!isConnected) { alert("Please connect serial first."); return; }
     const target = document.getElementById('pingTarget').value || "google.com";
     const count = document.getElementById('pingCount').value || 5;
     log("SYS", `Initiating Ping: ${target} (${count}x)...`);
@@ -171,72 +171,72 @@ window.startPing = () => {
 };
 
 // --- Serial Connection & Communication ---
-if(els.connect) els.connect.addEventListener('click', async () => {
+if (els.connect) els.connect.addEventListener('click', async () => {
     if ("serial" in navigator) {
         try {
             port = await navigator.serial.requestPort(); await port.open({ baudRate: 115200 });
             const td = new TextDecoderStream(); port.readable.pipeTo(td.writable); reader = td.readable.getReader();
             const te = new TextEncoderStream(); te.readable.pipeTo(port.writable); writer = te.writable.getWriter();
-            isConnected = true; log("SYS", "CONNECTED"); els.connect.innerText="LINKED"; els.connect.disabled=true;
+            isConnected = true; log("SYS", "CONNECTED"); els.connect.innerText = "LINKED"; els.connect.disabled = true;
             readLoop(); sendCommand("SCAN"); sendCommand("GET_STATUS");
-        } catch(e) { log("ERR", e.message); }
+        } catch (e) { log("ERR", e.message); }
     } else alert("No Serial API");
 });
 
-if(els.scan) els.scan.addEventListener('click', () => sendCommand("SCAN"));
+if (els.scan) els.scan.addEventListener('click', () => sendCommand("SCAN"));
 
 async function readLoop() {
     let buffer = "";
     try {
-        while(true) {
-            const {value,done}=await reader.read(); if(done)break;
+        while (true) {
+            const { value, done } = await reader.read(); if (done) break;
             buffer += value;
             const lines = buffer.split('\n');
             buffer = lines.pop();
             lines.forEach(l => {
                 const line = l.trim();
-                if(showRaw && line) log("RAW", line, true);
-                try { processLine(line); } catch(e){ console.error(e); }
+                if (showRaw && line) log("RAW", line, true);
+                try { processLine(line); } catch (e) { console.error(e); }
             });
         }
-    } catch(e){ log("ERR", "DISCONNECTED"); isConnected=false; }
+    } catch (e) { log("ERR", "DISCONNECTED"); isConnected = false; }
 }
 
-async function sendCommand(c) { if(writer) await writer.write(c+"\n"); }
+async function sendCommand(c) { if (writer) await writer.write(c + "\n"); }
 
 function processLine(line) {
-    if(!line) return;
-    if(line.startsWith("DATA:")) {
-        const parts=line.substring(5).split(','); const rssi=parseInt(parts[0]);
-        if(currentTab==='live') { els.disp.rssi.innerText=rssi; liveChartData.push(rssi); liveChartData.shift(); drawLiveChart(); }
-        else if(currentTab==='map') handleMapData(rssi);
-    } else if(line.startsWith("LIST:")) {
-        const p=line.substring(5).split(',');
-        if(p.length>=5) addNetwork(p[0],p[1],p[2]);
-    } else if(line.startsWith("STATUS:DEVICE:")) updateDeviceStatus(line);
-    else if(line.startsWith("STATUS:SCAN_START")) {
-        if(els.list) els.list.innerHTML = "";
+    if (!line) return;
+    if (line.startsWith("DATA:")) {
+        const parts = line.substring(5).split(','); const rssi = parseInt(parts[0]);
+        if (currentTab === 'live') { els.disp.rssi.innerText = rssi; liveChartData.push(rssi); liveChartData.shift(); drawLiveChart(); }
+        else if (currentTab === 'map') handleMapData(rssi);
+    } else if (line.startsWith("LIST:")) {
+        const p = line.substring(5).split(',');
+        if (p.length >= 5) addNetwork(p[0], p[1], p[2]);
+    } else if (line.startsWith("STATUS:DEVICE:")) updateDeviceStatus(line);
+    else if (line.startsWith("STATUS:SCAN_START")) {
+        if (els.list) els.list.innerHTML = "";
         log("SYS", "SCANNING...");
     }
-    else if(line.startsWith("LOG:")) log("DEV", line.substring(4));
+    else if (line.startsWith("LOG:")) log("DEV", line.substring(4));
 }
 
 function addNetwork(ssid, rssi, ch, bssid, sec) {
     // Add to Live List
     createListItem(els.list, ssid, rssi, ch, sec, () => {
-        liveTarget={ssid,channel:ch}; mapTarget={ssid,channel:ch};
-        els.disp.rssi.innerText="--";
+        liveTarget = { ssid, channel: ch }; mapTarget = { ssid, channel: ch };
+        els.disp.rssi.innerText = "--";
         els.mapTarget.innerText = ssid;
-        if(isConnected) sendCommand(`TRACK:${ssid}:${ch}`);
+        if (isConnected) sendCommand(`TRACK:${ssid}:${ch}`);
         // switchTab('live'); // Removed to prevent forced switching
     });
 }
 
 function createListItem(container, ssid, rssi, ch, sec, onClick) {
-    if(!container) return;
+    if (!container) return;
     const d = document.createElement('div');
-    d.className="list-item cursor-pointer group";
-    d.innerHTML=`
+    d.className = "list-item cursor-pointer group";
+    d.innerHTML = `
         <div class="flex justify-between mb-1">
             <span class="font-bold text-slate-200 break-all pr-2">${ssid}</span>
             <span class="text-sky-400 font-mono text-xs whitespace-nowrap">${rssi}dBm</span>
@@ -254,12 +254,12 @@ function updateDeviceStatus(line) {
         // Split by comma. Expected: ["STATUS:DEVICE:CONNECTED", "SSID", "IP", "RSSI", "GW", "MASK", "MAC"]
         const parts = line.split(",");
         if (parts.length >= 4) { // At least up to RSSI
-            els.mini.state.innerText = "ONLINE"; els.mini.state.className="text-green-500 font-bold";
+            els.mini.state.innerText = "ONLINE"; els.mini.state.className = "text-green-500 font-bold";
             els.mini.ssid.innerText = parts[1] || "";
             els.mini.ip.innerText = parts[2] || "--";
             els.mini.rssi2.innerText = (parts[3] || "--") + "dBm";
         }
-    } else if(line.includes("DISCONNECTED")) els.mini.state.innerText="OFFLINE";
+    } else if (line.includes("DISCONNECTED")) els.mini.state.innerText = "OFFLINE";
 }
 
 // --- Data Export & Import ---
@@ -282,21 +282,21 @@ window.importCSV = (input) => {
         mapData = []; measurementID = 1;
         let importedCount = 0;
         const startIdx = lines[0].includes("ID") ? 1 : 0;
-        for(let i = startIdx; i < lines.length; i++) {
-            const line = lines[i].trim(); if(!line) continue;
+        for (let i = startIdx; i < lines.length; i++) {
+            const line = lines[i].trim(); if (!line) continue;
             const parts = line.split(',');
-            if(parts.length >= 4) {
+            if (parts.length >= 4) {
                 const id = parseInt(parts[0]);
                 const angle = parseInt(parts[1]);
                 const rssi = parseInt(parts[2]);
                 const count = parseInt(parts[3]);
                 let rawSamples = [];
-                if(parts.length >= 5) {
+                if (parts.length >= 5) {
                     let rawStr = parts.slice(4).join(',');
                     rawStr = rawStr.replace(/"/g, '');
-                    if(rawStr) rawSamples = rawStr.split(';').map(Number).filter(n => !isNaN(n));
+                    if (rawStr) rawSamples = rawStr.split(';').map(Number).filter(n => !isNaN(n));
                 }
-                if(rawSamples.length === 0) rawSamples = new Array(count).fill(rssi);
+                if (rawSamples.length === 0) rawSamples = new Array(count).fill(rssi);
                 mapData.push({ id: measurementID++, angle, rssi, rawSamples });
                 importedCount++;
             }
@@ -307,12 +307,12 @@ window.importCSV = (input) => {
 };
 
 // --- Map & Radar Visualization ---
-function log(l,m, isRaw=false) {
-    if(!isRaw && !showLogs) return;
-    const d=document.createElement('div');
-    d.innerText=`[${l}] ${m}`;
-    if(isRaw) d.classList.add('text-slate-600');
-    els.log.appendChild(d); els.log.scrollTop=els.log.scrollHeight;
+function log(l, m, isRaw = false) {
+    if (!isRaw && !showLogs) return;
+    const d = document.createElement('div');
+    d.innerText = `[${l}] ${m}`;
+    if (isRaw) d.classList.add('text-slate-600');
+    els.log.appendChild(d); els.log.scrollTop = els.log.scrollHeight;
 }
 
 let dialAngle = 0, isDraggingDial = false;
@@ -321,45 +321,45 @@ function drawDial() {
     if (!els.dial.parentElement || els.dial.parentElement.offsetWidth === 0) return;
     const rect = els.dial.parentElement.getBoundingClientRect();
     els.dial.width = rect.width; els.dial.height = rect.height;
-    const ctx = dialCtx, w = els.dial.width, h = els.dial.height, cx = w/2, cy = h/2, r = Math.max(0, Math.min(w,h)/2 - 15);
+    const ctx = dialCtx, w = els.dial.width, h = els.dial.height, cx = w / 2, cy = h / 2, r = Math.max(0, Math.min(w, h) / 2 - 15);
     const C = getTheme();
     ctx.clearRect(0, 0, w, h);
-    let grd = ctx.createRadialGradient(cx, cy, r*0.2, cx, cy, r);
+    let grd = ctx.createRadialGradient(cx, cy, r * 0.2, cx, cy, r);
     grd.addColorStop(0, C.dialBg1); grd.addColorStop(1, C.dialBg2);
-    ctx.fillStyle = grd; ctx.beginPath(); ctx.arc(cx, cy, r, 0, 2*Math.PI); ctx.fill();
+    ctx.fillStyle = grd; ctx.beginPath(); ctx.arc(cx, cy, r, 0, 2 * Math.PI); ctx.fill();
     ctx.strokeStyle = C.dialRing; ctx.lineWidth = 6; ctx.stroke();
-    ctx.strokeStyle = C.stroke; ctx.lineWidth = 1; ctx.beginPath(); ctx.arc(cx, cy, r-5, 0, 2*Math.PI); ctx.stroke();
-    for(let i=0; i<360; i+=22.5) {
+    ctx.strokeStyle = C.stroke; ctx.lineWidth = 1; ctx.beginPath(); ctx.arc(cx, cy, r - 5, 0, 2 * Math.PI); ctx.stroke();
+    for (let i = 0; i < 360; i += 22.5) {
         const rad = (i - 90) * Math.PI / 180, isMajor = (i % 45 === 0);
         const x1 = cx + (r - 10) * Math.cos(rad), y1 = cy + (r - 10) * Math.sin(rad);
-        const x2 = cx + (r - 10 - (isMajor?12:6)) * Math.cos(rad), y2 = cy + (r - 10 - (isMajor?12:6)) * Math.sin(rad);
+        const x2 = cx + (r - 10 - (isMajor ? 12 : 6)) * Math.cos(rad), y2 = cy + (r - 10 - (isMajor ? 12 : 6)) * Math.sin(rad);
         ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2);
         ctx.strokeStyle = isMajor ? C.tickM : C.tickm; ctx.lineWidth = isMajor ? 2 : 1; ctx.stroke();
-        if(isMajor && r > 60) {
+        if (isMajor && r > 60) {
             const tx = cx + (r - 35) * Math.cos(rad), ty = cy + (r - 35) * Math.sin(rad);
             ctx.fillStyle = C.tickm; ctx.font = "bold 10px sans-serif"; ctx.textAlign = "center"; ctx.textBaseline = "middle";
-            ctx.fillText(Math.round(i)+"°", tx, ty);
+            ctx.fillText(Math.round(i) + "°", tx, ty);
         }
     }
     const arrowRad = (dialAngle - 90) * Math.PI / 180;
-    ctx.save(); ctx.translate(cx, cy); ctx.rotate(arrowRad); ctx.shadowBlur=5; ctx.shadowColor="rgba(0,0,0,0.5)";
-    ctx.beginPath(); ctx.moveTo(0, -4); ctx.lineTo(r-15, 0); ctx.lineTo(0, 4); ctx.fillStyle = C.needle; ctx.fill();
-    ctx.beginPath(); ctx.arc(0, 0, 6, 0, 2*Math.PI); ctx.fillStyle = "#e2e8f0"; ctx.fill();
+    ctx.save(); ctx.translate(cx, cy); ctx.rotate(arrowRad); ctx.shadowBlur = 5; ctx.shadowColor = "rgba(0,0,0,0.5)";
+    ctx.beginPath(); ctx.moveTo(0, -4); ctx.lineTo(r - 15, 0); ctx.lineTo(0, 4); ctx.fillStyle = C.needle; ctx.fill();
+    ctx.beginPath(); ctx.arc(0, 0, 6, 0, 2 * Math.PI); ctx.fillStyle = "#e2e8f0"; ctx.fill();
     ctx.restore();
 }
 function updateDialUI() { drawDial(); els.angleInput.value = dialAngle; els.dialVal.innerText = dialAngle + "°"; }
 function setAngleFromEvent(e) {
     const rect = els.dial.getBoundingClientRect();
-    let deg = Math.atan2(e.clientY - rect.top - rect.height/2, e.clientX - rect.left - rect.width/2) * 180 / Math.PI + 90;
+    let deg = Math.atan2(e.clientY - rect.top - rect.height / 2, e.clientX - rect.left - rect.width / 2) * 180 / Math.PI + 90;
     if (deg < 0) deg += 360; deg = Math.round(deg / 22.5) * 22.5; dialAngle = deg % 360; updateDialUI();
 }
-if(els.dial) els.dial.addEventListener('mousedown', (e) => { isDraggingDial = true; setAngleFromEvent(e); });
-window.addEventListener('mousemove', (e) => { if(isDraggingDial) setAngleFromEvent(e); });
+if (els.dial) els.dial.addEventListener('mousedown', (e) => { isDraggingDial = true; setAngleFromEvent(e); });
+window.addEventListener('mousemove', (e) => { if (isDraggingDial) setAngleFromEvent(e); });
 window.addEventListener('mouseup', () => { isDraggingDial = false; });
-if(els.angleInput) els.angleInput.addEventListener('change', () => { dialAngle = (parseFloat(els.angleInput.value)||0) % 360; updateDialUI(); });
+if (els.angleInput) els.angleInput.addEventListener('change', () => { dialAngle = (parseFloat(els.angleInput.value) || 0) % 360; updateDialUI(); });
 
-if(els.measureBtn) els.measureBtn.addEventListener('click', () => {
-    if(!isConnected || !mapTarget.ssid) { log("ERR", "Connect/Target req."); return; }
+if (els.measureBtn) els.measureBtn.addEventListener('click', () => {
+    if (!isConnected || !mapTarget.ssid) { log("ERR", "Connect/Target req."); return; }
     isMeasuring = true; currentSamples = [];
     requiredSamples = parseInt(els.sampleInput.value) || 2;
     els.measureBtn.disabled = true; els.measureBtn.innerText = "SAMPLING...";
@@ -367,11 +367,11 @@ if(els.measureBtn) els.measureBtn.addEventListener('click', () => {
     sendCommand(`TRACK:${mapTarget.ssid}:${mapTarget.channel}`);
 });
 function handleMapData(rssi) {
-    if(!isMeasuring || rssi <= -100) return;
+    if (!isMeasuring || rssi <= -100) return;
     currentSamples.push(rssi);
     els.progBar.style.width = (currentSamples.length / requiredSamples) * 100 + "%";
     els.statText.innerText = `${currentSamples.length}/${requiredSamples}`;
-    if(currentSamples.length >= requiredSamples) finishMeasurement();
+    if (currentSamples.length >= requiredSamples) finishMeasurement();
 }
 function finishMeasurement() {
     isMeasuring = false; els.measureBtn.disabled = false; els.measureBtn.innerText = "START"; els.statText.innerText = "Done.";
@@ -382,7 +382,7 @@ function finishMeasurement() {
 
 const radarCtx = els.radar.getContext('2d');
 const getQuality = (rssi) => Math.max(0, Math.min(100, (rssi + 100) * 1.5));
-if(els.radarModeBtn) els.radarModeBtn.addEventListener('click', () => {
+if (els.radarModeBtn) els.radarModeBtn.addEventListener('click', () => {
     radarMode = radarMode === 'rssi' ? 'quality' : 'rssi';
     els.radarModeBtn.innerText = `MODE: ${radarMode.toUpperCase()}`;
     drawRadar();
@@ -395,65 +395,65 @@ function resizeRadar() {
 function drawRadar() {
     const ctx = radarCtx, w = els.radar.width, h = els.radar.height;
     if (w < 1) return;
-    const cx = w/2, cy = h/2, maxR = Math.max(0, Math.min(w,h)/2 - 20);
+    const cx = w / 2, cy = h / 2, maxR = Math.max(0, Math.min(w, h) / 2 - 20);
     const C = getTheme();
     radarPoints = [];
     ctx.fillStyle = C.bg; ctx.fillRect(0, 0, w, h);
     ctx.strokeStyle = C.grid; ctx.lineWidth = 1;
-    [0.25, 0.5, 0.75, 1].forEach(s => { ctx.beginPath(); ctx.arc(cx, cy, maxR*s, 0, 2*Math.PI); ctx.stroke(); });
-    for(let i=0; i<360; i+=45) {
+    [0.25, 0.5, 0.75, 1].forEach(s => { ctx.beginPath(); ctx.arc(cx, cy, maxR * s, 0, 2 * Math.PI); ctx.stroke(); });
+    for (let i = 0; i < 360; i += 45) {
         const rad = (i - 90) * Math.PI / 180;
         ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(cx + maxR * Math.cos(rad), cy + maxR * Math.sin(rad)); ctx.stroke();
     }
-    if(predictedAngle !== null) {
+    if (predictedAngle !== null) {
         const pRad = (predictedAngle - 90) * Math.PI / 180;
         const endX = cx + maxR * Math.cos(pRad), endY = cy + maxR * Math.sin(pRad);
         ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(endX, endY);
         ctx.strokeStyle = "#fbbf24"; ctx.lineWidth = 3; ctx.setLineDash([6, 4]); ctx.stroke(); ctx.setLineDash([]);
         ctx.font = "bold 12px sans-serif"; ctx.fillStyle = "#fbbf24"; ctx.textAlign = "center"; ctx.fillText("TARGET", endX, endY - 10);
     }
-    if(mapData.length > 0) {
+    if (mapData.length > 0) {
         let uniqueAngles = {};
-        mapData.forEach(d => { if(!uniqueAngles[d.angle]) uniqueAngles[d.angle] = []; uniqueAngles[d.angle].push(d.rssi); });
-        let sortedAngles = Object.keys(uniqueAngles).map(Number).sort((a,b)=>a-b);
+        mapData.forEach(d => { if (!uniqueAngles[d.angle]) uniqueAngles[d.angle] = []; uniqueAngles[d.angle].push(d.rssi); });
+        let sortedAngles = Object.keys(uniqueAngles).map(Number).sort((a, b) => a - b);
         ctx.beginPath();
         sortedAngles.forEach((ang, i) => {
-            let avgRssi = uniqueAngles[ang].reduce((a,b)=>a+b,0) / uniqueAngles[ang].length;
-            let r = radarMode==='rssi' ? (avgRssi + 95) / 70 : getQuality(avgRssi)/100;
-            if(r<0)r=0; if(r>1)r=1;
+            let avgRssi = uniqueAngles[ang].reduce((a, b) => a + b, 0) / uniqueAngles[ang].length;
+            let r = radarMode === 'rssi' ? (avgRssi + 95) / 70 : getQuality(avgRssi) / 100;
+            if (r < 0) r = 0; if (r > 1) r = 1;
             let rad = (ang - 90) * Math.PI / 180;
             let x = cx + r * maxR * Math.cos(rad), y = cy + r * maxR * Math.sin(rad);
-            if(i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
+            if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
         });
         ctx.closePath(); ctx.fillStyle = C.fill; ctx.fill(); ctx.strokeStyle = C.stroke; ctx.lineWidth = 2; ctx.stroke();
         mapData.forEach(d => {
-            let r = radarMode==='rssi' ? (d.rssi + 95) / 70 : getQuality(d.rssi)/100;
-            if(r<0)r=0; if(r>1)r=1;
+            let r = radarMode === 'rssi' ? (d.rssi + 95) / 70 : getQuality(d.rssi) / 100;
+            if (r < 0) r = 0; if (r > 1) r = 1;
             let rad = (d.angle - 90) * Math.PI / 180;
             let x = cx + r * maxR * Math.cos(rad), y = cy + r * maxR * Math.sin(rad);
             radarPoints.push({ x, y, id: d.id, angle: d.angle, rssi: d.rssi, samples: d.rawSamples.length });
             const isHovered = (d.id === hoveredPointId);
-            ctx.beginPath(); ctx.arc(x, y, isHovered ? 6 : 4, 0, 2*Math.PI);
+            ctx.beginPath(); ctx.arc(x, y, isHovered ? 6 : 4, 0, 2 * Math.PI);
             ctx.fillStyle = d.id === hoveredPointId ? "#ffff00" : (isLightMode ? "#334155" : "#fff"); ctx.fill();
-            if(isHovered) { ctx.strokeStyle = "#fff"; ctx.lineWidth = 2; ctx.stroke(); }
+            if (isHovered) { ctx.strokeStyle = "#fff"; ctx.lineWidth = 2; ctx.stroke(); }
         });
     }
 }
-if(els.radar) els.radar.addEventListener('mousemove', (e) => {
+if (els.radar) els.radar.addEventListener('mousemove', (e) => {
     const rect = els.radar.getBoundingClientRect();
     const mouseX = e.clientX - rect.left, mouseY = e.clientY - rect.top;
     let hit = radarPoints.find(p => Math.sqrt(Math.pow(mouseX - p.x, 2) + Math.pow(mouseY - p.y, 2)) < 15);
-    if(hit) {
-        if(hoveredPointId !== hit.id) { hoveredPointId = hit.id; drawRadar(); highlightRow(hit.id); }
+    if (hit) {
+        if (hoveredPointId !== hit.id) { hoveredPointId = hit.id; drawRadar(); highlightRow(hit.id); }
         els.tooltip.style.left = (e.clientX + 15) + 'px'; els.tooltip.style.top = (e.clientY + 15) + 'px';
         els.tooltip.innerHTML = `<div class='font-bold text-yellow-400'>#${hit.id}</div><div>${hit.angle}° | ${hit.rssi}dBm</div>`;
         els.tooltip.classList.remove('hidden'); els.radar.style.cursor = 'pointer';
     } else {
-        if(hoveredPointId !== null) { hoveredPointId = null; drawRadar(); highlightRow(null); }
+        if (hoveredPointId !== null) { hoveredPointId = null; drawRadar(); highlightRow(null); }
         els.tooltip.classList.add('hidden'); els.radar.style.cursor = 'crosshair';
     }
 });
-if(els.radar) els.radar.addEventListener('mouseleave', () => { if(hoveredPointId!==null) { hoveredPointId=null; drawRadar(); highlightRow(null); } els.tooltip.classList.add('hidden'); });
+if (els.radar) els.radar.addEventListener('mouseleave', () => { if (hoveredPointId !== null) { hoveredPointId = null; drawRadar(); highlightRow(null); } els.tooltip.classList.add('hidden'); });
 
 function updateTable() {
     els.table.innerHTML = "";
@@ -474,10 +474,10 @@ function updateTable() {
         els.table.appendChild(row); els.table.appendChild(subRow);
     });
 }
-window.toggleSubRow = (id) => { const sub = document.getElementById(`subrow-${id}`); if(sub) sub.classList.toggle('hidden'); };
-window.deleteMeasurement = (id) => { mapData=mapData.filter(d=>d.id!==id); updateTable(); drawRadar(); };
-window.clearMapData = () => { mapData=[]; predictedAngle=null; updateTable(); drawRadar(); els.predResult.innerText="--"; };
-function highlightRow(id) { document.querySelectorAll('.active-row').forEach(r=>r.classList.remove('active-row')); if(id){ const r=document.getElementById(`row-${id}`); if(r) r.classList.add('active-row'); }}
+window.toggleSubRow = (id) => { const sub = document.getElementById(`subrow-${id}`); if (sub) sub.classList.toggle('hidden'); };
+window.deleteMeasurement = (id) => { mapData = mapData.filter(d => d.id !== id); updateTable(); drawRadar(); };
+window.clearMapData = () => { mapData = []; predictedAngle = null; updateTable(); drawRadar(); els.predResult.innerText = "--"; };
+function highlightRow(id) { document.querySelectorAll('.active-row').forEach(r => r.classList.remove('active-row')); if (id) { const r = document.getElementById(`row-${id}`); if (r) r.classList.add('active-row'); } }
 window.generateTestData = () => {
     log("SIM", "Generating random sweep..."); mapData = []; measurementID = 1; predictedAngle = null;
     const centerAngle = Math.floor(Math.random() * 360);
@@ -485,43 +485,43 @@ window.generateTestData = () => {
     log("SIM", `Sim Source: ${centerAngle}°`);
     for (let ang = 0; ang < 360; ang += 22.5) {
         let dist = Math.abs(ang - centerAngle); if (dist > 180) dist = 360 - dist;
-        let signal = -95 + (peakRSSI + 95) * Math.exp(-(dist*dist)/(2*45*45));
+        let signal = -95 + (peakRSSI + 95) * Math.exp(-(dist * dist) / (2 * 45 * 45));
         signal += (Math.random() - 0.5) * 8;
         let rssi = Math.round(signal);
-        mapData.push({ id: measurementID++, angle: ang, rssi: rssi, rawSamples: [rssi, rssi-1, rssi+1] });
+        mapData.push({ id: measurementID++, angle: ang, rssi: rssi, rawSamples: [rssi, rssi - 1, rssi + 1] });
     }
     updateTable(); drawRadar();
 };
 window.calculateSource = () => {
     const validPoints = mapData.filter(d => d.rssi > -100);
-    if(validPoints.length < 3) { els.predResult.innerText="NEED DATA"; return; }
+    if (validPoints.length < 3) { els.predResult.innerText = "NEED DATA"; return; }
 
     // Group by angle to prevent sampling bias
     const uniqueAngles = {};
     validPoints.forEach(d => {
-        if(!uniqueAngles[d.angle]) uniqueAngles[d.angle] = [];
+        if (!uniqueAngles[d.angle]) uniqueAngles[d.angle] = [];
         uniqueAngles[d.angle].push(d.rssi);
     });
 
-    let sumSin=0, sumCos=0;
+    let sumSin = 0, sumCos = 0;
     Object.keys(uniqueAngles).forEach(angleStr => {
         const ang = parseFloat(angleStr);
         const rssis = uniqueAngles[angleStr];
         const avgRssi = rssis.reduce((a, b) => a + b, 0) / rssis.length;
 
-        let w = Math.pow(10, (avgRssi+100)/20);
-        let r = (ang-90)*Math.PI/180;
-        sumSin += Math.sin(r)*w; sumCos += Math.cos(r)*w;
+        let w = Math.pow(10, (avgRssi + 100) / 20);
+        let r = (ang - 90) * Math.PI / 180;
+        sumSin += Math.sin(r) * w; sumCos += Math.cos(r) * w;
     });
 
-    let deg = Math.round(Math.atan2(sumSin,sumCos)*180/Math.PI + 90);
-    if(deg<0) deg+=360; predictedAngle = deg;
+    let deg = Math.round(Math.atan2(sumSin, sumCos) * 180 / Math.PI + 90);
+    if (deg < 0) deg += 360; predictedAngle = deg;
     els.predResult.innerHTML = `<span class='text-yellow-400 font-bold'>EST: ${deg}°</span>`; drawRadar();
 };
 
 // --- Live Chart Logic ---
 const liveCtx = els.liveChart.getContext('2d');
-function resizeLiveChart() { if(els.liveChart.parentElement.offsetWidth > 0) { els.liveChart.width = els.liveChart.parentElement.offsetWidth; els.liveChart.height = els.liveChart.parentElement.offsetHeight; drawLiveChart(); } }
+function resizeLiveChart() { if (els.liveChart.parentElement.offsetWidth > 0) { els.liveChart.width = els.liveChart.parentElement.offsetWidth; els.liveChart.height = els.liveChart.parentElement.offsetHeight; drawLiveChart(); } }
 
 window.openLiveChartImage = () => {
     const w = window.open("");
@@ -529,16 +529,16 @@ window.openLiveChartImage = () => {
 };
 
 function drawLiveChart() {
-    if(currentTab!=='live') return;
-    const w=els.liveChart.width, h=els.liveChart.height, C=getTheme();
-    if(w<1) return;
-    const ctx=liveCtx;
+    if (currentTab !== 'live') return;
+    const w = els.liveChart.width, h = els.liveChart.height, C = getTheme();
+    if (w < 1) return;
+    const ctx = liveCtx;
     ctx.fillStyle = C.bg; ctx.fillRect(0, 0, w, h);
 
     // Auto Scale
     let minVal = Math.min(...liveChartData, -100);
     let maxVal = Math.max(...liveChartData, -30);
-    if(maxVal - minVal < 20) { maxVal += 10; minVal -= 10; }
+    if (maxVal - minVal < 20) { maxVal += 10; minVal -= 10; }
     const pRange = maxVal - minVal;
     const xOffset = 30;
     const yMargin = 10;
@@ -549,8 +549,8 @@ function drawLiveChart() {
     ctx.fillStyle = C.text; ctx.font = "10px monospace"; ctx.textAlign = "right"; ctx.textBaseline = "middle";
     ctx.strokeStyle = C.grid; ctx.lineWidth = 1;
     const stepY = pRange / 5;
-    for(let i=0; i<=5; i++) {
-        let val = minVal + i*stepY;
+    for (let i = 0; i <= 5; i++) {
+        let val = minVal + i * stepY;
         let y = yMargin + drawH - ((val - minVal) / pRange * drawH);
         ctx.beginPath(); ctx.moveTo(xOffset, y); ctx.lineTo(w, y); ctx.stroke();
         ctx.fillText(Math.round(val), xOffset - 4, y);
@@ -565,7 +565,7 @@ function drawLiveChart() {
     });
     ctx.stroke();
 }
-window.addEventListener('resize', () => { resizeLiveChart(); if(currentTab==='map') { drawDial(); resizeRadar(); } });
+window.addEventListener('resize', () => { resizeLiveChart(); if (currentTab === 'map') { drawDial(); resizeRadar(); } });
 switchTab('live');
 
 // --- Zoom Logic ---
@@ -578,9 +578,9 @@ function updateZoom() {
     setTimeout(() => { resizeLiveChart(); resizeRadar(); drawDial(); }, 100);
 }
 
-if(zoomOutBtn) zoomOutBtn.addEventListener('click', () => {
-    if(currentZoom > 0.5) { currentZoom -= 0.1; updateZoom(); }
+if (zoomOutBtn) zoomOutBtn.addEventListener('click', () => {
+    if (currentZoom > 0.5) { currentZoom -= 0.1; updateZoom(); }
 });
-if(zoomInBtn) zoomInBtn.addEventListener('click', () => {
-    if(currentZoom < 2.0) { currentZoom += 0.1; updateZoom(); }
+if (zoomInBtn) zoomInBtn.addEventListener('click', () => {
+    if (currentZoom < 2.0) { currentZoom += 0.1; updateZoom(); }
 });
