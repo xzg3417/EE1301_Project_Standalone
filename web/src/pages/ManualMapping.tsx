@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { ProCard, StatisticCard } from '@ant-design/pro-components';
 import { Button, InputNumber, Progress, Table, Alert } from 'antd';
 import { AimOutlined, ClearOutlined, DownloadOutlined } from '@ant-design/icons';
-import { useApp } from '../context/AppContext';
+import { useApp, type Measurement } from '../context/AppContext';
 import Dial from '../components/Dial';
 import Radar from '../components/Radar';
 
@@ -42,7 +42,7 @@ const ManualMapping: React.FC = () => {
         { title: 'Ang', dataIndex: 'angle', width: 60, render: (v: number) => <b>{v}°</b> },
         { title: 'RSSI', dataIndex: 'rssi', width: 80, render: (v: number) => <span className="text-blue-400 font-mono font-bold">{v}</span> },
         { title: '#', dataIndex: 'rawSamples', width: 50, render: (v: number[]) => v.length },
-        { title: 'Act', width: 50, render: (_: any, record: any) => (
+        { title: 'Act', width: 50, render: (_: unknown, record: Measurement) => (
                 <Button type="text" danger size="small" onClick={() => deleteMeasurement(record.id)}>x</Button>
             )
         }

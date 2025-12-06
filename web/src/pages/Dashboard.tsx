@@ -19,14 +19,22 @@ const Dashboard: React.FC = () => {
   // Parse RSSI
   const rssiVal = useMemo(() => {
     if (!deviceStatus.rssi || deviceStatus.rssi === '--') return -100;
-    return parseInt(deviceStatus.rssi.replace('dBm', ''));
+    const parsed = parseInt(deviceStatus.rssi.replace('dBm', ''));
+    return isNaN(parsed) ? -100 : parsed;
   }, [deviceStatus.rssi]);
+
+  // Determine signal color
+  const signalColor = useMemo(() => {
+      if (rssiVal > -60) return '#52c41a'; // Green
+      if (rssiVal > -80) return '#faad14'; // Yellow
+      return '#f5222d'; // Red
+  }, [rssiVal]);
 
   // Gauge Config
   const gaugeConfig = {
-    percent: (rssiVal + 100) / 70, // Map -100..-30 to 0..1
+    percent: Math.min(Math.max((rssiVal + 100) / 70, 0), 1), // Clamp 0-1
     range: {
-      color: '#30BF78',
+      color: signalColor,
     },
     indicator: {
       pointer: {
@@ -48,6 +56,14 @@ const Dashboard: React.FC = () => {
             color: 'rgba(0,0,0,0.85)',
         }
       },
+    },
+    axis: {
+        label: {
+            formatter: (v: string) => Number(v) * 100,
+        },
+        subTickLine: {
+            count: 3,
+        },
     },
   };
 
@@ -74,6 +90,9 @@ const Dashboard: React.FC = () => {
     yAxis: {
         min: -130,
         max: -30
+    },
+    xAxis: {
+        range: [0, 1],
     }
   };
 
@@ -129,18 +148,18 @@ const Dashboard: React.FC = () => {
       <ProCard gutter={[16, 16]} wrap ghost>
 
         {/* Row 1: Key Metrics */}
-        <ProCard colSpan={{ xs: 24, md: 8 }} layout="center" bordered>
+        <ProCard colSpan={{ xs: 24, md: 8 }} layout="center" bordered style={{ height: '100%', minHeight: 280 }}>
             <StatisticCard
                 title="Signal Strength"
                 chart={
-                   <div style={{ height: 180, width: '100%', display: 'flex', justifyContent: 'center' }}>
-                     <Gauge {...gaugeConfig} height={180} width={180} />
+                   <div style={{ height: 200, width: '100%', display: 'flex', justifyContent: 'center' }}>
+                     <Gauge {...gaugeConfig} height={200} width={200} />
                    </div>
                 }
             />
         </ProCard>
 
-        <ProCard colSpan={{ xs: 24, md: 8 }} split="horizontal" bordered>
+        <ProCard colSpan={{ xs: 24, md: 8 }} split="horizontal" bordered style={{ height: '100%', minHeight: 280 }}>
             <ProCard split="vertical">
                 <StatisticCard
                     statistic={{
@@ -159,19 +178,19 @@ const Dashboard: React.FC = () => {
             </ProCard>
              <ProCard>
                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: 16 }}>
-                    <span>Target SSID:</span>
-                    <span style={{ fontWeight: 'bold' }}>{useApp().liveTarget?.ssid || 'None'}</span>
+                    <span style={{ color: '#888' }}>Target SSID:</span>
+                    <span style={{ fontWeight: 'bold', fontSize: '1.2em' }}>{useApp().liveTarget?.ssid || 'None'}</span>
                  </div>
             </ProCard>
         </ProCard>
 
-        <ProCard colSpan={{ xs: 24, md: 8 }} title="Connection Details" bordered>
-             <Descriptions column={1} size="small">
+        <ProCard colSpan={{ xs: 24, md: 8 }} title="Connection Details" bordered style={{ height: '100%', minHeight: 280 }}>
+             <Descriptions column={1} size="small" bordered>
                  <Descriptions.Item label="IP Address">{deviceStatus.ip}</Descriptions.Item>
                  <Descriptions.Item label="Current SSID">{deviceStatus.ssid}</Descriptions.Item>
                  <Descriptions.Item label="Signal Quality">
                      <Space>
-                        <Progress percent={signalLevel * 25} steps={4} strokeColor="#52c41a" showInfo={false} />
+                        <Progress percent={signalLevel * 25} steps={4} strokeColor={signalColor} showInfo={false} size="small" />
                         <span>{signalLevel}/4</span>
                      </Space>
                  </Descriptions.Item>

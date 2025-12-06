@@ -6,7 +6,7 @@ import { useApp } from '../context/AppContext';
 const PingTool: React.FC = () => {
     const { isConnected, sendCommand, addLog } = useApp();
 
-    const handlePing = (values: any) => {
+    const handlePing = (values: { target: string; count: number }) => {
         if (!isConnected) {
             addLog("SYS", "Please connect serial first.");
             return;
@@ -21,7 +21,7 @@ const PingTool: React.FC = () => {
                 {!isConnected && <Alert message="Serial connection required" type="error" showIcon className="mb-4" />}
 
                 <ProForm
-                    onFinish={async (values) => handlePing(values)}
+                    onFinish={async (values) => handlePing(values as { target: string; count: number })}
                     submitter={{
                         searchConfig: {
                             submitText: 'START PING',

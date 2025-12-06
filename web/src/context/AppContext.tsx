@@ -69,7 +69,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [measureProgress, setMeasureProgress] = useState({ current: 0, total: 0 });
   const [liveTarget, setLiveTarget] = useState<{ ssid: string; channel: number } | null>(null);
 
-  const portRef = useRef<any>(null);
+  const portRef = useRef<SerialPort | null>(null);
   const readerRef = useRef<ReadableStreamDefaultReader<string> | null>(null);
   const writerRef = useRef<WritableStreamDefaultWriter<string> | null>(null);
 
@@ -99,8 +99,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (writerRef.current) {
       try {
         await writerRef.current.write(cmd + "\n");
-      } catch (e: any) {
-        addLog("ERR", `Send Failed: ${e.message}`);
+      } catch (e: unknown) {
+        const errMsg = e instanceof Error ? e.message : String(e);
+        addLog("ERR", `Send Failed: ${errMsg}`);
       }
     }
   }, [addLog]);
@@ -108,87 +109,96 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const processLine = useCallback((line: string) => {
     if (!line) return;
 
-    if (line.startsWith("DATA:")) {
-      const parts = line.substring(5).split(',');
-      const rssi = parseInt(parts[0]);
+    try {
+        if (line.startsWith("DATA:")) {
+          const parts = line.substring(5).split(',');
+          const rssi = parseInt(parts[0]);
 
-      // Update Live Chart
-      setLiveChartData(prev => {
-        const newData = [...prev, rssi];
-        if (newData.length > 150) newData.shift();
-        return newData;
-      });
+          if (!isNaN(rssi)) {
+              // Update Live Chart
+              setLiveChartData(prev => {
+                const newData = [...prev, rssi];
+                if (newData.length > 150) newData.shift();
+                return newData;
+              });
 
-      // Handle Measurement
-      if (measurementRef.current.active) {
-         if (rssi > -100) {
-             measurementRef.current.samples.push(rssi);
-             setMeasureProgress({
-                 current: measurementRef.current.samples.length,
-                 total: measurementRef.current.required
-             });
+              // Handle Measurement
+              if (measurementRef.current.active) {
+                 if (rssi > -100) {
+                     measurementRef.current.samples.push(rssi);
+                     setMeasureProgress({
+                         current: measurementRef.current.samples.length,
+                         total: measurementRef.current.required
+                     });
 
-             if (measurementRef.current.samples.length >= measurementRef.current.required) {
-                 const avg = Math.round(measurementRef.current.samples.reduce((a, b) => a + b, 0) / measurementRef.current.samples.length);
-                 const newMeasurement: Measurement = {
-                     id: measurementIdRef.current++,
-                     angle: measurementRef.current.angle,
-                     rssi: avg,
-                     rawSamples: [...measurementRef.current.samples]
-                 };
-                 setMapData(prev => [...prev, newMeasurement]);
-                 measurementRef.current.active = false;
-                 setIsMeasuring(false);
-                 addLog("MAP", `Saved: ${avg}dBm @ ${measurementRef.current.angle}°`);
-             }
-         }
-      }
+                     if (measurementRef.current.samples.length >= measurementRef.current.required) {
+                         const avg = Math.round(measurementRef.current.samples.reduce((a, b) => a + b, 0) / measurementRef.current.samples.length);
+                         const newMeasurement: Measurement = {
+                             id: measurementIdRef.current++,
+                             angle: measurementRef.current.angle,
+                             rssi: avg,
+                             rawSamples: [...measurementRef.current.samples]
+                         };
+                         setMapData(prev => [...prev, newMeasurement]);
+                         measurementRef.current.active = false;
+                         setIsMeasuring(false);
+                         addLog("MAP", `Saved: ${avg}dBm @ ${measurementRef.current.angle}°`);
+                     }
+                 }
+              }
+          }
 
-    } else if (line.startsWith("LIST:")) {
-      const p = line.substring(5).split(',');
-      if (p.length >= 3) {
-        const ssid = p[0];
-        const rssi = parseInt(p[1]);
-        const ch = parseInt(p[2]);
-        const sec = p[4] || '';
+        } else if (line.startsWith("LIST:")) {
+          const p = line.substring(5).split(',');
+          if (p.length >= 3) {
+            const ssid = p[0];
+            const rssi = parseInt(p[1]);
+            const ch = parseInt(p[2]);
+            const sec = p[4] || '';
 
-        setNetworks(prev => {
-            const existingIdx = prev.findIndex(n => n.ssid === ssid);
-            const now = Date.now();
-            if (existingIdx >= 0) {
-                const updated = [...prev];
-                updated[existingIdx] = { ...updated[existingIdx], rssi, channel: ch, lastSeen: now };
-                return updated;
-            } else {
-                return [...prev, { ssid, rssi, channel: ch, security: sec, lastSeen: now }];
+            if (!isNaN(rssi) && !isNaN(ch)) {
+                setNetworks(prev => {
+                    const existingIdx = prev.findIndex(n => n.ssid === ssid);
+                    const now = Date.now();
+                    if (existingIdx >= 0) {
+                        const updated = [...prev];
+                        updated[existingIdx] = { ...updated[existingIdx], rssi, channel: ch, lastSeen: now };
+                        return updated;
+                    } else {
+                        return [...prev, { ssid, rssi, channel: ch, security: sec, lastSeen: now }];
+                    }
+                });
             }
-        });
-      }
-    } else if (line.startsWith("STATUS:DEVICE:CONNECTED")) {
-       const parts = line.split(",");
-       if (parts.length >= 4) {
-           setDeviceStatus({
-               state: "ONLINE",
-               ssid: parts[1] || "",
-               ip: parts[2] || "--",
-               rssi: (parts[3] || "--") + "dBm"
-           });
-       }
-    } else if (line.includes("DISCONNECTED")) {
-        setDeviceStatus(prev => ({ ...prev, state: "OFFLINE" }));
-    } else if (line.startsWith("STATUS:SCAN_START")) {
-        setNetworks([]);
-        addLog("SYS", "SCANNING...");
-    } else if (line.startsWith("LOG:")) {
-        addLog("DEV", line.substring(4));
+          }
+        } else if (line.startsWith("STATUS:DEVICE:CONNECTED")) {
+           const parts = line.split(",");
+           if (parts.length >= 4) {
+               setDeviceStatus({
+                   state: "ONLINE",
+                   ssid: parts[1] || "",
+                   ip: parts[2] || "--",
+                   rssi: (parts[3] || "--") + "dBm"
+               });
+           }
+        } else if (line.includes("DISCONNECTED")) {
+            setDeviceStatus(prev => ({ ...prev, state: "OFFLINE" }));
+        } else if (line.startsWith("STATUS:SCAN_START")) {
+            setNetworks([]);
+            addLog("SYS", "SCANNING...");
+        } else if (line.startsWith("LOG:")) {
+            addLog("DEV", line.substring(4));
+        }
+    } catch (e) {
+        console.error("Parse Error", e);
     }
   }, [addLog]);
 
-  const readLoop = async () => {
+  const readLoop = useCallback(async () => {
     let buffer = "";
     try {
       while (true) {
-        const { value, done } = await readerRef.current!.read();
+        if (!readerRef.current) break;
+        const { value, done } = await readerRef.current.read();
         if (done) break;
         buffer += value;
         const lines = buffer.split('\n');
@@ -199,18 +209,19 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             processLine(line);
         });
       }
-    } catch (e: any) {
+    } catch (e: unknown) {
       addLog("ERR", "DISCONNECTED");
       setIsConnected(false);
       setDeviceStatus(prev => ({ ...prev, state: "OFFLINE" }));
     } finally {
       if (readerRef.current) readerRef.current.releaseLock();
     }
-  };
+  }, [addLog, processLine]);
 
   const connect = async () => {
     if ("serial" in navigator) {
       try {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const port = await (navigator as any).serial.requestPort();
         await port.open({ baudRate: 115200 });
         portRef.current = port;
@@ -235,9 +246,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             sendCommand("SCAN");
         }, 500);
 
-      } catch (e: any) {
-        addLog("ERR", e.message);
-        message.error(`Connection failed: ${e.message}`);
+      } catch (e: unknown) {
+        const errMsg = e instanceof Error ? e.message : String(e);
+        addLog("ERR", errMsg);
+        message.error(`Connection failed: ${errMsg}`);
       }
     } else {
       message.error("Web Serial API not supported in this browser.");
@@ -303,3 +315,11 @@ export const useApp = () => {
     if (!context) throw new Error("useApp must be used within AppProvider");
     return context;
 };
+
+// Minimal type for Web Serial API as it's not standard yet
+interface SerialPort {
+    open(options: { baudRate: number }): Promise<void>;
+    close(): Promise<void>;
+    readable: ReadableStream;
+    writable: WritableStream;
+}

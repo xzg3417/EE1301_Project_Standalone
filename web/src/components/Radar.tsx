@@ -14,7 +14,7 @@ const Radar: React.FC<RadarProps> = ({ data, predictedAngle, mode }) => {
   const [hoveredPoint, setHoveredPoint] = useState<Measurement | null>(null);
   const [tooltipPos, setTooltipPos] = useState({ x: 0, y: 0 });
 
-  const radarPointsRef = useRef<any[]>([]);
+  const radarPointsRef = useRef<{x: number, y: number, data: Measurement}[]>([]);
 
   useEffect(() => {
     const canvas = canvasRef.current;

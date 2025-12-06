@@ -1,4 +1,4 @@
-import React, { useRef, useEffect, useState } from 'react';
+import React, { useRef, useEffect, useState, useCallback } from 'react';
 import { theme } from 'antd';
 
 interface DialProps {
@@ -110,13 +110,13 @@ const Dial: React.FC<DialProps> = ({ angle, setAngle }) => {
 
   }, [angle, token]);
 
-  const updateAngle = (e: MouseEvent | React.MouseEvent) => {
+  const updateAngle = useCallback((e: MouseEvent | React.MouseEvent) => {
     const rect = canvasRef.current!.getBoundingClientRect();
     let deg = Math.atan2(e.clientY - rect.top - rect.height / 2, e.clientX - rect.left - rect.width / 2) * 180 / Math.PI + 90;
     if (deg < 0) deg += 360;
     deg = Math.round(deg / 22.5) * 22.5;
     setAngle(deg % 360);
-  };
+  }, [setAngle]);
 
   const handleMouseDown = (e: React.MouseEvent) => {
       setIsDragging(true);
@@ -137,7 +137,7 @@ const Dial: React.FC<DialProps> = ({ angle, setAngle }) => {
           window.removeEventListener('mousemove', handleGlobalMouseMove);
           window.removeEventListener('mouseup', handleGlobalMouseUp);
       };
-  }, [isDragging]);
+  }, [isDragging, updateAngle]);
 
   return <div style={{ width: '100%', height: '100%' }}><canvas ref={canvasRef} onMouseDown={handleMouseDown} style={{ cursor: 'pointer' }} /></div>;
 };
