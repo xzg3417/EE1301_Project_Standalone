@@ -6,10 +6,13 @@
 
 **NOTES**
 
-- Fix state diagram parsing error in Mermaid
-  - Replaced literal colons (:) with HTML entity #58; in the "TRACK" command label. 
+- Gemini
+  - Fix state diagram parsing error in Mermaid
+    - Replaced literal colons (:) with HTML entity #58; in the "TRACK" command label. 
     The literal colons were conflicting with Mermaid's syntax separators, causing the graph rendering to fail.
     - ai -> local & fix -> review & learn => easier to solve similar issues
+- Jules
+  - PR - Fix sampling bias in source estimation #19
 - Vector Math Verification: The `atan2` formula for converting 0-North coordinates was verified using AI to ensure the $90^\circ$ offset logic was correct.
 
 **TODO**
