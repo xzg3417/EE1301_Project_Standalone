@@ -25,7 +25,9 @@
 
 Unlike standard Wi-Fi scanners that simply list available networks, Signal Hunter treats signal strength (RSSI) as a vector quantity (magnitude and direction), enabling a "Radar" visualization approach.
 
-![image-20251205135259703](https://github.com/xzg3417/EE1301_Project_Standalone/blob/main/screenshots/PSCR-2025.12.05.15.30.49.png)
+![PSCR-2025.12.05.20.27.37](https://github.com/xzg3417/EE1301_Project_Standalone/blob/main/screenshots/PSCR-2025.12.05.20.27.37.png)
+
+![img](https://github.com/xzg3417/EE1301_Project_Standalone/blob/main/screenshots/img.png)
 
 ![image-20251205135434517](https://github.com/xzg3417/EE1301_Project_Standalone/blob/main/screenshots/image-20251205135434517.png)
 
