@@ -495,12 +495,25 @@ window.generateTestData = () => {
 window.calculateSource = () => {
     const validPoints = mapData.filter(d => d.rssi > -100);
     if(validPoints.length < 3) { els.predResult.innerText="NEED DATA"; return; }
-    let sumSin=0, sumCos=0;
+
+    // Group by angle to prevent sampling bias
+    const uniqueAngles = {};
     validPoints.forEach(d => {
-        let w = Math.pow(10, (d.rssi+100)/20);
-        let r = (d.angle-90)*Math.PI/180;
+        if(!uniqueAngles[d.angle]) uniqueAngles[d.angle] = [];
+        uniqueAngles[d.angle].push(d.rssi);
+    });
+
+    let sumSin=0, sumCos=0;
+    Object.keys(uniqueAngles).forEach(angleStr => {
+        const ang = parseFloat(angleStr);
+        const rssis = uniqueAngles[angleStr];
+        const avgRssi = rssis.reduce((a, b) => a + b, 0) / rssis.length;
+
+        let w = Math.pow(10, (avgRssi+100)/20);
+        let r = (ang-90)*Math.PI/180;
         sumSin += Math.sin(r)*w; sumCos += Math.cos(r)*w;
     });
+
     let deg = Math.round(Math.atan2(sumSin,sumCos)*180/Math.PI + 90);
     if(deg<0) deg+=360; predictedAngle = deg;
     els.predResult.innerHTML = `<span class='text-yellow-400 font-bold'>EST: ${deg}°</span>`; drawRadar();
