@@ -19,7 +19,7 @@
                 <div>
                     <h1 class="text-xl font-bold tracking-wider text-white">Photon 2 Wi-Fi Signal Mapper<span
                             class="text-indigo-400"> v21.1</span></h1>
-                    <p class="text-[9px] text-slate-500 tracking-[0.2em] uppercase">RF VISUALIZATION</p>
+                    <p class="text-[0.5625rem] text-slate-500 tracking-[0.2em] uppercase">RF VISUALIZATION</p>
                 </div>
             </div>
 
@@ -34,19 +34,21 @@
             </div>
 
             <div class="flex gap-2 items-center">
-                <div class="flex items-center mr-2 bg-slate-800 rounded-full border border-slate-700 p-0.5 shadow-sm">
-                    <button id="zoomOutBtn" class="w-6 h-6 rounded-full flex items-center justify-center text-slate-400 hover:text-white hover:bg-slate-700 transition-colors font-bold text-sm">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line></svg>
-                    </button>
-                    <button id="zoomInBtn" class="w-6 h-6 rounded-full flex items-center justify-center text-slate-400 hover:text-white hover:bg-slate-700 transition-colors font-bold text-sm">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
-                    </button>
-                </div>
                 <button id="themeBtn" class="btn px-3 py-1 text-xs text-slate-600 font-bold border-slate-400">🌙
                     MODE</button>
                 <button id="connectBtn" class="btn px-4 py-1 text-xs text-sky-400 font-bold border-sky-900">CONNECT
                     SERIAL</button>
             </div>
+        </div>
+
+        <!-- Zoom Controls -->
+        <div class="fixed top-2 right-2 z-[100] flex gap-1">
+            <button id="zoomOutBtn" class="btn w-7 h-7 flex items-center justify-center text-slate-400 font-bold text-lg rounded shadow-lg border-slate-600 bg-slate-800">
+                -
+            </button>
+            <button id="zoomInBtn" class="btn w-7 h-7 flex items-center justify-center text-slate-400 font-bold text-lg rounded shadow-lg border-slate-600 bg-slate-800">
+                +
+            </button>
         </div>
 
         <!-- Status Bar -->
@@ -101,10 +103,10 @@
                         </div>
                     </div>
                     <div class="flex-1 panel relative flex flex-col min-h-0 group">
-                        <div class="absolute top-2 left-2 text-[10px] text-slate-500 z-10 pointer-events-none">LIVE PLOT
+                        <div class="absolute top-2 left-2 text-[0.625rem] text-slate-500 z-10 pointer-events-none">LIVE PLOT
                         </div>
                         <button onclick="openLiveChartImage()" title="Open PNG in New Tab"
-                            class="absolute top-2 right-2 z-20 text-[10px] bg-slate-800 text-sky-400 border border-slate-600 px-2 py-0.5 rounded opacity-50 hover:opacity-100 hover:text-white transition-opacity">EXPORT
+                            class="absolute top-2 right-2 z-20 text-[0.625rem] bg-slate-800 text-sky-400 border border-slate-600 px-2 py-0.5 rounded opacity-50 hover:opacity-100 hover:text-white transition-opacity">EXPORT
                             PNG</button>
                         <div class="w-full h-full"><canvas id="signalChart"></canvas></div>
                     </div>
@@ -117,7 +119,7 @@
                     <div class="flex-1 overflow-y-auto custom-scroll p-2 flex flex-col gap-2">
                         <div
                             class="p-2 flex flex-col items-center justify-center bg-slate-900/50 rounded border border-slate-800">
-                            <h3 class="text-sky-400 font-bold mb-1 text-[10px] tracking-widest">DIRECTION</h3>
+                            <h3 class="text-sky-400 font-bold mb-1 text-[0.625rem] tracking-widest">DIRECTION</h3>
                             <div class="relative w-full aspect-square max-h-56">
                                 <canvas id="dialCanvas" class="w-full h-full cursor-pointer"></canvas>
                                 <div
@@ -136,13 +138,13 @@
                         <div class="p-2 border border-slate-700 rounded bg-slate-900/20">
                             <div class="grid grid-cols-1 gap-2 mb-2">
                                 <div>
-                                    <label class="text-[10px] text-slate-400 block">Target</label>
+                                    <label class="text-[0.625rem] text-slate-400 block">Target</label>
                                     <div id="mapTargetSSID"
                                         class="text-xs font-bold text-sky-400 truncate bg-slate-900 px-1 py-0.5 rounded">
                                         SELECT IN LIVE TAB</div>
                                 </div>
                                 <div class="flex justify-between items-center">
-                                    <label class="text-[10px] text-slate-400">Samples:</label>
+                                    <label class="text-[0.625rem] text-slate-400">Samples:</label>
                                     <input type="number" id="sampleCountInput"
                                         class="dark-input w-12 text-xs text-center" value="2" min="1" max="50">
                                 </div>
@@ -154,31 +156,31 @@
                                 <div id="measureProgress" class="h-full bg-green-500 w-0 transition-all duration-200">
                                 </div>
                             </div>
-                            <div id="measureStatus" class="text-center text-[9px] text-slate-500 h-3">Ready</div>
+                            <div id="measureStatus" class="text-center text-[0.5625rem] text-slate-500 h-3">Ready</div>
                         </div>
 
                         <!-- TOOLS -->
                         <div class="p-2 border border-yellow-900/30 rounded bg-yellow-900/5 flex flex-col gap-2">
-                            <div class="text-[10px] font-bold text-yellow-500 border-b border-yellow-900/30 pb-1">
+                            <div class="text-[0.625rem] font-bold text-yellow-500 border-b border-yellow-900/30 pb-1">
                                 ANALYTICS & DATA</div>
                             <button onclick="calculateSource()"
-                                class="btn w-full py-1 text-[10px] font-bold text-yellow-400 border-yellow-800 hover:bg-yellow-900/40">CALC
+                                class="btn w-full py-1 text-[0.625rem] font-bold text-yellow-400 border-yellow-800 hover:bg-yellow-900/40">CALC
                                 SOURCE</button>
                             <div id="predictionResult"
-                                class="text-center text-[10px] font-mono text-slate-400 min-h-[1rem]">--</div>
+                                class="text-center text-[0.625rem] font-mono text-slate-400 min-h-[1rem]">--</div>
 
                             <div class="grid grid-cols-2 gap-1 mt-1">
                                 <button onclick="generateTestData()"
-                                    class="btn py-1 text-[9px] text-slate-300 border-slate-600">TEST DATA</button>
+                                    class="btn py-1 text-[0.5625rem] text-slate-300 border-slate-600">TEST DATA</button>
                                 <button onclick="clearMapData()"
-                                    class="btn py-1 text-[9px] text-red-400 border-red-900">CLEAR ALL</button>
+                                    class="btn py-1 text-[0.5625rem] text-red-400 border-red-900">CLEAR ALL</button>
                             </div>
 
                             <div class="grid grid-cols-2 gap-1 border-t border-slate-700/50 pt-2 mt-1">
                                 <button onclick="exportCSV()"
-                                    class="btn py-1 text-[9px] text-sky-400 border-sky-900">EXPORT CSV</button>
+                                    class="btn py-1 text-[0.5625rem] text-sky-400 border-sky-900">EXPORT CSV</button>
                                 <label
-                                    class="btn py-1 text-[9px] text-slate-300 border-slate-600 cursor-pointer text-center block">
+                                    class="btn py-1 text-[0.5625rem] text-slate-300 border-slate-600 cursor-pointer text-center block">
                                     IMPORT CSV
                                     <input type="file" onchange="importCSV(this)" accept=".csv" class="hidden">
                                 </label>
@@ -191,9 +193,9 @@
 
                 <div id="panel-center" class="panel flex-1 min-w-[200px] relative bg-black overflow-hidden">
                     <div class="absolute top-2 left-2 flex items-center gap-2 z-10">
-                        <span class="text-[10px] text-slate-500 pointer-events-none">RADAR PLOT</span>
+                        <span class="text-[0.625rem] text-slate-500 pointer-events-none">RADAR PLOT</span>
                         <button id="radarModeBtn"
-                            class="bg-slate-800 text-[9px] px-2 py-0.5 rounded border border-slate-600 hover:bg-slate-700 text-sky-300">MODE:
+                            class="bg-slate-800 text-[0.5625rem] px-2 py-0.5 rounded border border-slate-600 hover:bg-slate-700 text-sky-300">MODE:
                             RSSI</button>
                     </div>
                     <div class="w-full h-full flex items-center justify-center overflow-hidden"><canvas id="radarCanvas"
@@ -205,7 +207,7 @@
                 <div id="panel-right" class="panel min-w-[200px]" style="width: 25%;">
                     <div class="p-2 border-b border-slate-800 flex justify-between items-center bg-slate-900 shrink-0">
                         <span class="text-xs font-bold text-slate-400">DATA LOG</span>
-                        <button onclick="clearMapData()" class="text-[9px] text-red-400 hover:text-white">[ CLEAR
+                        <button onclick="clearMapData()" class="text-[0.5625rem] text-red-400 hover:text-white">[ CLEAR
                             ]</button>
                     </div>
                     <div class="flex-1 overflow-y-auto custom-scroll" id="tableContainer">
@@ -239,13 +241,13 @@
                     <div class="grid grid-cols-3 gap-4">
                         <div class="col-span-2">
                             <label
-                                class="text-[10px] text-slate-500 uppercase font-bold tracking-wider mb-1 block">Target
+                                class="text-[0.625rem] text-slate-500 uppercase font-bold tracking-wider mb-1 block">Target
                                 Host / IP</label>
                             <input type="text" id="pingTarget" class="dark-input w-full font-mono" value="google.com">
                         </div>
                         <div>
                             <label
-                                class="text-[10px] text-slate-500 uppercase font-bold tracking-wider mb-1 block">Count</label>
+                                class="text-[0.625rem] text-slate-500 uppercase font-bold tracking-wider mb-1 block">Count</label>
                             <input type="number" id="pingCount" class="dark-input w-full font-mono" value="5" min="1"
                                 max="20">
                         </div>
@@ -256,7 +258,7 @@
                         <span>START PING</span>
                     </button>
 
-                    <div class="text-[10px] text-slate-500 text-center mt-2">
+                    <div class="text-[0.625rem] text-slate-500 text-center mt-2">
                         Results will appear in the System Log below.
                     </div>
                 </div>
@@ -267,7 +269,7 @@
         <div id="panel-terminal" class="shrink-0 panel bg-black font-mono text-xs overflow-hidden"
             style="height: 120px; min-height: 40px; max-height: 50%;">
             <div
-                class="p-1 px-2 bg-slate-900 text-[10px] text-slate-500 border-b border-slate-800 flex justify-between items-center">
+                class="p-1 px-2 bg-slate-900 text-[0.625rem] text-slate-500 border-b border-slate-800 flex justify-between items-center">
                 <div class="flex items-center gap-2">
                     <span>SYSTEM LOG</span>
                     <label class="flex items-center gap-1 cursor-pointer hover:text-slate-300 select-none"><input

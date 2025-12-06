@@ -184,3 +184,26 @@ body.light-mode .flex.items-center.bg-slate-800.rounded-full.border.border-slate
 #resizer-live:hover {
     background: #38bdf8;
 }
+
+/* --- Fixed Zoom Controls Styling --- */
+/* Ensure fixed controls don't scale with root font size by overriding font-size if inherited (though px values in class help) */
+#zoomOutBtn, #zoomInBtn {
+    /* Set a fixed size in pixels to prevent scaling */
+    width: 28px !important;
+    height: 28px !important;
+    font-size: 18px !important;
+}
+
+/* Light mode overrides for the new fixed zoom buttons */
+body.light-mode #zoomOutBtn,
+body.light-mode #zoomInBtn {
+    background-color: #f1f5f9;
+    color: #334155;
+    border-color: #cbd5e1;
+}
+body.light-mode #zoomOutBtn:hover,
+body.light-mode #zoomInBtn:hover {
+    background-color: #fff;
+    color: #0ea5e9;
+    border-color: #0ea5e9;
+}

@@ -241,7 +241,7 @@ function createListItem(container, ssid, rssi, ch, sec, onClick) {
             <span class="font-bold text-slate-200 break-all pr-2">${ssid}</span>
             <span class="text-sky-400 font-mono text-xs whitespace-nowrap">${rssi}dBm</span>
         </div>
-        <div class="text-[10px] text-slate-500 font-mono flex justify-between">
+        <div class="text-[0.625rem] text-slate-500 font-mono flex justify-between">
             <span>CH:${ch}</span>
             <span class="text-slate-400">${sec || ''}</span>
         </div>`;
@@ -460,7 +460,7 @@ function updateTable() {
     [...mapData].reverse().forEach(d => {
         const row = document.createElement('tr'); row.id = `row-${d.id}`; row.className = "main-row border-b border-slate-800";
         row.innerHTML = `
-            <td class="text-center"><button onclick="event.stopPropagation(); toggleSubRow(${d.id})" class="text-sky-500 font-mono text-[10px] hover:text-white">[+]</button></td>
+            <td class="text-center"><button onclick="event.stopPropagation(); toggleSubRow(${d.id})" class="text-sky-500 font-mono text-[0.625rem] hover:text-white">[+]</button></td>
             <td class="font-bold text-yellow-400">${d.angle}°</td>
             <td class="font-mono text-sky-400 font-bold">${d.rssi}</td>
             <td class="text-slate-400 text-center">${d.rawSamples.length}</td>
@@ -468,7 +468,7 @@ function updateTable() {
         `;
         const subRow = document.createElement('tr');
         subRow.id = `subrow-${d.id}`; subRow.className = "sub-row hidden";
-        subRow.innerHTML = `<td colspan="5" class="p-1 bg-slate-900/50 inset-shadow"><div class="flex flex-wrap gap-1 text-[9px] font-mono text-slate-500"><span>RAW:</span>${d.rawSamples.map(v => `<span class="bg-slate-800 px-1 rounded text-slate-300">${v}</span>`).join('')}</div></td>`;
+        subRow.innerHTML = `<td colspan="5" class="p-1 bg-slate-900/50 inset-shadow"><div class="flex flex-wrap gap-1 text-[0.5625rem] font-mono text-slate-500"><span>RAW:</span>${d.rawSamples.map(v => `<span class="bg-slate-800 px-1 rounded text-slate-300">${v}</span>`).join('')}</div></td>`;
         row.addEventListener('mouseenter', () => { hoveredPointId = d.id; drawRadar(); });
         row.addEventListener('mouseleave', () => { hoveredPointId = null; drawRadar(); });
         els.table.appendChild(row); els.table.appendChild(subRow);
