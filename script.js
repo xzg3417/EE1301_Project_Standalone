@@ -15,7 +15,7 @@ let isLightMode = true;
 const els = {
     tabs: { live: document.getElementById('tab-live'), map: document.getElementById('tab-map'), wifi: document.getElementById('tab-wifi') },
     views: { live: document.getElementById('view-live'), map: document.getElementById('view-map'), wifi: document.getElementById('view-wifi') },
-    panels: { left: document.getElementById('panel-left'), center: document.getElementById('panel-center'), right: document.getElementById('panel-right'), terminal: document.getElementById('panel-terminal') },
+    panels: { left: document.getElementById('panel-left'), center: document.getElementById('panel-center'), right: document.getElementById('panel-right'), terminal: document.getElementById('panel-terminal'), liveList: document.getElementById('panel-live-list'), liveMain: document.getElementById('panel-live-main') },
     list: document.getElementById('networkList'),
     liveChart: document.getElementById('signalChart'),
     disp: { rssi: document.getElementById('dispRSSI'), rate: document.getElementById('dispRate') },
@@ -79,10 +79,15 @@ function makeResizable(resizer, type, el1, el2, el3) {
     const onMouseMove = (e) => {
         if (type === 'h') {
             const dx = e.clientX - startPos;
+            if (!el1.parentElement) return;
             const parentW = el1.parentElement.offsetWidth;
-            if(resizer.id === 'resizer-1') {
+            if(resizer.id === 'resizer-1' || resizer.id === 'resizer-live') {
                 const newW = ((startSize1 + dx) / parentW) * 100;
-                if(newW > 10 && newW < 50) { el1.style.width = newW + '%'; drawDial(); resizeRadar(); }
+                if(newW > 10 && newW < 80) {
+                    el1.style.width = newW + '%';
+                    if (resizer.id === 'resizer-1') { drawDial(); resizeRadar(); }
+                    if (resizer.id === 'resizer-live') { resizeLiveChart(); }
+                }
             } else {
                 const newW = ((startSize3 - dx) / parentW) * 100;
                 if(newW > 10 && newW < 50) { el3.style.width = newW + '%'; resizeRadar(); }
@@ -98,14 +103,27 @@ function makeResizable(resizer, type, el1, el2, el3) {
     };
     const onMouseUp = () => { document.removeEventListener('mousemove', onMouseMove); document.removeEventListener('mouseup', onMouseUp); };
     resizer.addEventListener('mousedown', (e) => {
+        console.log(`Resizer mousedown: ${resizer.id}`);
         startPos = type === 'h' ? e.clientX : e.clientY;
-        if(type === 'h') { startSize1 = el1.offsetWidth; startSize3 = el3.offsetWidth; } else { startSize1 = el1.offsetHeight; }
+        if(type === 'h') {
+            startSize1 = el1 ? el1.offsetWidth : 0;
+            startSize3 = el3 ? el3.offsetWidth : 0;
+        } else {
+            startSize1 = el1 ? el1.offsetHeight : 0;
+        }
         document.addEventListener('mousemove', onMouseMove); document.addEventListener('mouseup', onMouseUp);
     });
 }
-makeResizable(document.getElementById('resizer-1'), 'h', els.panels.left, els.panels.center, els.panels.right);
-makeResizable(document.getElementById('resizer-2'), 'h', els.panels.left, els.panels.center, els.panels.right);
-makeResizable(document.getElementById('resizer-terminal'), 'v', els.panels.terminal);
+// Ensure elements are fetched correctly even if index.html was modified
+const resizer1 = document.getElementById('resizer-1');
+const resizer2 = document.getElementById('resizer-2');
+const resizerLive = document.getElementById('resizer-live');
+const resizerTerm = document.getElementById('resizer-terminal');
+
+if (resizer1) makeResizable(resizer1, 'h', els.panels.left, els.panels.center, els.panels.right);
+if (resizer2) makeResizable(resizer2, 'h', els.panels.left, els.panels.center, els.panels.right);
+if (resizerLive) makeResizable(resizerLive, 'h', els.panels.liveList, els.panels.liveMain);
+if (resizerTerm) makeResizable(resizerTerm, 'v', els.panels.terminal);
 
 // --- Table Column Resizing Logic ---
 document.querySelectorAll('.col-resizer').forEach(resizer => {
@@ -223,7 +241,7 @@ function createListItem(container, ssid, rssi, ch, sec, onClick) {
             <span class="font-bold text-slate-200 break-all pr-2">${ssid}</span>
             <span class="text-sky-400 font-mono text-xs whitespace-nowrap">${rssi}dBm</span>
         </div>
-        <div class="text-[10px] text-slate-500 font-mono flex justify-between">
+        <div class="text-[0.625rem] text-slate-500 font-mono flex justify-between">
             <span>CH:${ch}</span>
             <span class="text-slate-400">${sec || ''}</span>
         </div>`;
@@ -442,7 +460,7 @@ function updateTable() {
     [...mapData].reverse().forEach(d => {
         const row = document.createElement('tr'); row.id = `row-${d.id}`; row.className = "main-row border-b border-slate-800";
         row.innerHTML = `
-            <td class="text-center"><button onclick="event.stopPropagation(); toggleSubRow(${d.id})" class="text-sky-500 font-mono text-[10px] hover:text-white">[+]</button></td>
+            <td class="text-center"><button onclick="event.stopPropagation(); toggleSubRow(${d.id})" class="text-sky-500 font-mono text-[0.625rem] hover:text-white">[+]</button></td>
             <td class="font-bold text-yellow-400">${d.angle}°</td>
             <td class="font-mono text-sky-400 font-bold">${d.rssi}</td>
             <td class="text-slate-400 text-center">${d.rawSamples.length}</td>
@@ -450,7 +468,7 @@ function updateTable() {
         `;
         const subRow = document.createElement('tr');
         subRow.id = `subrow-${d.id}`; subRow.className = "sub-row hidden";
-        subRow.innerHTML = `<td colspan="5" class="p-1 bg-slate-900/50 inset-shadow"><div class="flex flex-wrap gap-1 text-[9px] font-mono text-slate-500"><span>RAW:</span>${d.rawSamples.map(v => `<span class="bg-slate-800 px-1 rounded text-slate-300">${v}</span>`).join('')}</div></td>`;
+        subRow.innerHTML = `<td colspan="5" class="p-1 bg-slate-900/50 inset-shadow"><div class="flex flex-wrap gap-1 text-[0.5625rem] font-mono text-slate-500"><span>RAW:</span>${d.rawSamples.map(v => `<span class="bg-slate-800 px-1 rounded text-slate-300">${v}</span>`).join('')}</div></td>`;
         row.addEventListener('mouseenter', () => { hoveredPointId = d.id; drawRadar(); });
         row.addEventListener('mouseleave', () => { hoveredPointId = null; drawRadar(); });
         els.table.appendChild(row); els.table.appendChild(subRow);
@@ -536,3 +554,20 @@ function drawLiveChart() {
 }
 window.addEventListener('resize', () => { resizeLiveChart(); if(currentTab==='map') { drawDial(); resizeRadar(); } });
 switchTab('live');
+
+// --- Zoom Logic ---
+let currentZoom = 1.0;
+const zoomOutBtn = document.getElementById('zoomOutBtn');
+const zoomInBtn = document.getElementById('zoomInBtn');
+
+function updateZoom() {
+    document.documentElement.style.fontSize = (16 * currentZoom) + 'px';
+    setTimeout(() => { resizeLiveChart(); resizeRadar(); drawDial(); }, 100);
+}
+
+if(zoomOutBtn) zoomOutBtn.addEventListener('click', () => {
+    if(currentZoom > 0.5) { currentZoom -= 0.1; updateZoom(); }
+});
+if(zoomInBtn) zoomInBtn.addEventListener('click', () => {
+    if(currentZoom < 2.0) { currentZoom += 0.1; updateZoom(); }
+});
