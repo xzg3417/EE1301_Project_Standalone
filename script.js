@@ -1,14 +1,47 @@
 // --- Global Variables ---
+/** @type {string} The currently active tab ('live', 'map', or 'wifi'). */
 let currentTab = 'live';
-let showRaw = false, showLogs = true;
-let port, reader, writer, isConnected = false;
+/** @type {boolean} Flag to toggle raw serial data logging. */
+let showRaw = false;
+/** @type {boolean} Flag to toggle logging display. */
+let showLogs = true;
+/** @type {SerialPort|null} The connected serial port. */
+let port;
+/** @type {ReadableStreamDefaultReader|null} The serial reader. */
+let reader;
+/** @type {WritableStreamDefaultWriter|null} The serial writer. */
+let writer;
+/** @type {boolean} Connection status of the serial port. */
+let isConnected = false;
+/** @type {string} Current radar visualization mode ('rssi' or 'quality'). */
 let radarMode = 'rssi';
+/** @type {{ssid: string, channel: number}} The target network for live tracking. */
 let liveTarget = { ssid: "", channel: 0 };
+/** @type {number[]} Array storing historical RSSI data for the live chart. */
 let liveChartData = new Array(150).fill(-120);
-let packetCount = 0, lastRateCheck = 0;
+/** @type {number} Packet counter (unused in current logic). */
+let packetCount = 0;
+/** @type {number} Timestamp of the last rate check (unused). */
+let lastRateCheck = 0;
+/** @type {{ssid: string, channel: number}} The target network for mapping. */
 let mapTarget = { ssid: "", channel: 0 };
-let mapData = [], measurementID = 1, isMeasuring = false, currentSamples = [], requiredSamples = 2;
-let predictedAngle = null, radarPoints = [], hoveredPointId = null;
+/** @type {Array<{id: number, angle: number, rssi: number, rawSamples: number[]}>} Array storing mapping measurement data. */
+let mapData = [];
+/** @type {number} Auto-incrementing ID for measurements. */
+let measurementID = 1;
+/** @type {boolean} Flag indicating if a measurement is currently in progress. */
+let isMeasuring = false;
+/** @type {number[]} Array storing RSSI samples for the current measurement. */
+let currentSamples = [];
+/** @type {number} Number of samples required per measurement. */
+let requiredSamples = 2;
+/** @type {number|null} The calculated predicted angle of the signal source. */
+let predictedAngle = null;
+/** @type {Array<{x: number, y: number, id: number, angle: number, rssi: number, samples: number}>} Array of points rendered on the radar. */
+let radarPoints = [];
+/** @type {number|null} ID of the radar point currently hovered by the mouse. */
+let hoveredPointId = null;
+/** @type {boolean} Flag indicating if light mode is active. */
 let isLightMode = true;
 
 // --- DOM Elements Reference ---
@@ -42,6 +75,7 @@ const els = {
 };
 
 // --- Theme Logic ---
+/** @type {Object} Color definitions for light and dark themes. */
 const COLORS = {
     dark: { bg: "#000000", grid: "#1e293b", stroke: "#38bdf8", fill: "rgba(56, 189, 248, 0.2)", dialBg1: "#1e293b", dialBg2: "#0f172a", dialRing: "#334155", tickM: "#cbd5e1", tickm: "#475569", needle: "#e11d48", text: "#fff" },
     light: { bg: "#ffffff", grid: "#cbd5e1", stroke: "#0284c7", fill: "rgba(2, 132, 199, 0.2)", dialBg1: "#f1f5f9", dialBg2: "#e2e8f0", dialRing: "#94a3b8", tickM: "#334155", tickm: "#64748b", needle: "#dc2626", text: "#0f172a" }
@@ -69,10 +103,21 @@ if(els.themeBtn) els.themeBtn.addEventListener('click', () => {
     drawDial(); drawRadar(); drawLiveChart();
 });
 
-// Get current theme colors
+/**
+ * @brief Retrieves the current color theme.
+ * @returns {Object} The color object for the current theme (light or dark).
+ */
 function getTheme() { return isLightMode ? COLORS.light : COLORS.dark; }
 
 // --- Layout Resizing ---
+/**
+ * @brief Enables resizing functionality for layout panels.
+ * @param {HTMLElement} resizer The element acting as the drag handle.
+ * @param {string} type The direction of resizing ('h' for horizontal, 'v' for vertical).
+ * @param {HTMLElement} el1 The primary element being resized.
+ * @param {HTMLElement} el2 The middle element (optional/context dependent).
+ * @param {HTMLElement} el3 The third element (optional/context dependent).
+ */
 function makeResizable(resizer, type, el1, el2, el3) {
     if (!resizer) return;
     let startPos, startSize1, startSize3;
@@ -128,6 +173,10 @@ document.querySelectorAll('.col-resizer').forEach(resizer => {
 });
 
 // --- Tab Switching Logic ---
+/**
+ * @brief Switches the active UI tab.
+ * @param {string} tab The ID of the tab to switch to ('live', 'map', 'wifi').
+ */
 window.switchTab = (tab) => {
     currentTab = tab;
     ['live', 'map', 'wifi'].forEach(t => {
@@ -144,6 +193,10 @@ window.switchTab = (tab) => {
     else if(tab === 'map') { setTimeout(() => { drawDial(); resizeRadar(); }, 50); if(mapTarget.ssid && isConnected) sendCommand(`TRACK:${mapTarget.ssid}:${mapTarget.channel}`); else if(isConnected) sendCommand("STOP"); }
 };
 
+/**
+ * @brief Initiates a ping command via the serial connection.
+ * Reads target and count from input fields.
+ */
 window.startPing = () => {
     if(!isConnected) { alert("Please connect serial first."); return; }
     const target = document.getElementById('pingTarget').value || "google.com";
@@ -167,6 +220,10 @@ if(els.connect) els.connect.addEventListener('click', async () => {
 
 if(els.scan) els.scan.addEventListener('click', () => sendCommand("SCAN"));
 
+/**
+ * @brief Continuously reads data from the serial port.
+ * Handles buffer accumulation and line splitting.
+ */
 async function readLoop() {
     let buffer = "";
     try {
@@ -184,8 +241,17 @@ async function readLoop() {
     } catch(e){ log("ERR", "DISCONNECTED"); isConnected=false; }
 }
 
+/**
+ * @brief Sends a command to the serial device.
+ * @param {string} c The command string to send.
+ */
 async function sendCommand(c) { if(writer) await writer.write(c+"\n"); }
 
+/**
+ * @brief Processes a single line of data received from the serial device.
+ * Routing logic for different data types (DATA, LIST, STATUS, LOG).
+ * @param {string} line The line of text to process.
+ */
 function processLine(line) {
     if(!line) return;
     if(line.startsWith("DATA:")) {
@@ -203,6 +269,14 @@ function processLine(line) {
     else if(line.startsWith("LOG:")) log("DEV", line.substring(4));
 }
 
+/**
+ * @brief Adds a network to the network list UI.
+ * @param {string} ssid The SSID of the network.
+ * @param {number|string} rssi The RSSI value.
+ * @param {number|string} ch The channel number.
+ * @param {string} bssid The BSSID (MAC address).
+ * @param {string} sec The security type.
+ */
 function addNetwork(ssid, rssi, ch, bssid, sec) {
     // Add to Live List
     createListItem(els.list, ssid, rssi, ch, sec, () => {
@@ -214,6 +288,15 @@ function addNetwork(ssid, rssi, ch, bssid, sec) {
     });
 }
 
+/**
+ * @brief Creates a DOM element for a network list item.
+ * @param {HTMLElement} container The container to append the item to.
+ * @param {string} ssid The SSID.
+ * @param {number|string} rssi The RSSI.
+ * @param {number|string} ch The channel.
+ * @param {string} sec The security string.
+ * @param {function} onClick Callback function when the item is clicked.
+ */
 function createListItem(container, ssid, rssi, ch, sec, onClick) {
     if(!container) return;
     const d = document.createElement('div');
@@ -231,6 +314,10 @@ function createListItem(container, ssid, rssi, ch, sec, onClick) {
     container.appendChild(d);
 }
 
+/**
+ * @brief Updates the device status indicators in the UI.
+ * @param {string} line The status string received from the device.
+ */
 function updateDeviceStatus(line) {
     if (line.startsWith("STATUS:DEVICE:CONNECTED")) {
         // Split by comma. Expected: ["STATUS:DEVICE:CONNECTED", "SSID", "IP", "RSSI", "GW", "MASK", "MAC"]
@@ -245,6 +332,9 @@ function updateDeviceStatus(line) {
 }
 
 // --- Data Export & Import ---
+/**
+ * @brief Exports the collected mapping data as a CSV file.
+ */
 window.exportCSV = () => {
     let csv = "ID,Angle,AvgRSSI,Count,Raw_Samples\n";
     mapData.forEach(d => {
@@ -255,6 +345,11 @@ window.exportCSV = () => {
     let url = window.URL.createObjectURL(blob);
     let a = document.createElement('a'); a.href = url; a.download = "radar_data.csv"; a.click();
 };
+
+/**
+ * @brief Imports mapping data from a CSV file.
+ * @param {HTMLInputElement} input The file input element.
+ */
 window.importCSV = (input) => {
     const file = input.files[0]; if (!file) return;
     const reader = new FileReader();
@@ -289,6 +384,12 @@ window.importCSV = (input) => {
 };
 
 // --- Map & Radar Visualization ---
+/**
+ * @brief Appends a message to the log console.
+ * @param {string} l The log level or category tag.
+ * @param {string} m The message.
+ * @param {boolean} isRaw Whether this is a raw data log (styled differently).
+ */
 function log(l,m, isRaw=false) {
     if(!isRaw && !showLogs) return;
     const d=document.createElement('div');
@@ -299,6 +400,10 @@ function log(l,m, isRaw=false) {
 
 let dialAngle = 0, isDraggingDial = false;
 const dialCtx = els.dial.getContext('2d');
+
+/**
+ * @brief Renders the interactive direction dial on the canvas.
+ */
 function drawDial() {
     if (!els.dial.parentElement || els.dial.parentElement.offsetWidth === 0) return;
     const rect = els.dial.parentElement.getBoundingClientRect();
@@ -329,7 +434,17 @@ function drawDial() {
     ctx.beginPath(); ctx.arc(0, 0, 6, 0, 2*Math.PI); ctx.fillStyle = "#e2e8f0"; ctx.fill();
     ctx.restore();
 }
+
+/**
+ * @brief Updates the Dial UI including canvas and input fields.
+ */
 function updateDialUI() { drawDial(); els.angleInput.value = dialAngle; els.dialVal.innerText = dialAngle + "°"; }
+
+/**
+ * @brief Sets the dial angle based on a mouse event.
+ * Calculates angle, snaps to 22.5 degree steps.
+ * @param {MouseEvent} e The mouse event.
+ */
 function setAngleFromEvent(e) {
     const rect = els.dial.getBoundingClientRect();
     let deg = Math.atan2(e.clientY - rect.top - rect.height/2, e.clientX - rect.left - rect.width/2) * 180 / Math.PI + 90;
@@ -348,6 +463,11 @@ if(els.measureBtn) els.measureBtn.addEventListener('click', () => {
     els.statText.innerText = `0 / ${requiredSamples}`; els.progBar.style.width = "0%";
     sendCommand(`TRACK:${mapTarget.ssid}:${mapTarget.channel}`);
 });
+
+/**
+ * @brief Handles incoming RSSI data during a measurement.
+ * @param {number} rssi The RSSI value.
+ */
 function handleMapData(rssi) {
     if(!isMeasuring || rssi <= -100) return;
     currentSamples.push(rssi);
@@ -355,6 +475,11 @@ function handleMapData(rssi) {
     els.statText.innerText = `${currentSamples.length}/${requiredSamples}`;
     if(currentSamples.length >= requiredSamples) finishMeasurement();
 }
+
+/**
+ * @brief Finalizes a measurement sequence.
+ * Averages samples, saves to mapData, and updates UI.
+ */
 function finishMeasurement() {
     isMeasuring = false; els.measureBtn.disabled = false; els.measureBtn.innerText = "START"; els.statText.innerText = "Done.";
     let avg = Math.round(currentSamples.reduce((a, b) => a + b, 0) / currentSamples.length);
@@ -369,11 +494,20 @@ if(els.radarModeBtn) els.radarModeBtn.addEventListener('click', () => {
     els.radarModeBtn.innerText = `MODE: ${radarMode.toUpperCase()}`;
     drawRadar();
 });
+
+/**
+ * @brief Resizes the radar canvas to match its parent container.
+ */
 function resizeRadar() {
     if (els.radar.parentElement.offsetWidth < 1) return;
     els.radar.width = els.radar.parentElement.offsetWidth; els.radar.height = els.radar.parentElement.offsetHeight;
     drawRadar();
 }
+
+/**
+ * @brief Renders the radar visualization.
+ * Draws grid, recorded points, and the predicted source vector.
+ */
 function drawRadar() {
     const ctx = radarCtx, w = els.radar.width, h = els.radar.height;
     if (w < 1) return;
@@ -437,6 +571,9 @@ if(els.radar) els.radar.addEventListener('mousemove', (e) => {
 });
 if(els.radar) els.radar.addEventListener('mouseleave', () => { if(hoveredPointId!==null) { hoveredPointId=null; drawRadar(); highlightRow(null); } els.tooltip.classList.add('hidden'); });
 
+/**
+ * @brief Updates the measurement data table.
+ */
 function updateTable() {
     els.table.innerHTML = "";
     [...mapData].reverse().forEach(d => {
@@ -456,10 +593,33 @@ function updateTable() {
         els.table.appendChild(row); els.table.appendChild(subRow);
     });
 }
+
+/**
+ * @brief Toggles the visibility of the sub-row containing raw sample data.
+ * @param {number} id The measurement ID.
+ */
 window.toggleSubRow = (id) => { const sub = document.getElementById(`subrow-${id}`); if(sub) sub.classList.toggle('hidden'); };
+
+/**
+ * @brief Deletes a specific measurement.
+ * @param {number} id The measurement ID to delete.
+ */
 window.deleteMeasurement = (id) => { mapData=mapData.filter(d=>d.id!==id); updateTable(); drawRadar(); };
+
+/**
+ * @brief Clears all mapping data.
+ */
 window.clearMapData = () => { mapData=[]; predictedAngle=null; updateTable(); drawRadar(); els.predResult.innerText="--"; };
+
+/**
+ * @brief Highlights a row in the data table.
+ * @param {number|null} id The ID of the row to highlight, or null to clear.
+ */
 function highlightRow(id) { document.querySelectorAll('.active-row').forEach(r=>r.classList.remove('active-row')); if(id){ const r=document.getElementById(`row-${id}`); if(r) r.classList.add('active-row'); }}
+
+/**
+ * @brief Generates random test data for simulation purposes.
+ */
 window.generateTestData = () => {
     log("SIM", "Generating random sweep..."); mapData = []; measurementID = 1; predictedAngle = null;
     const centerAngle = Math.floor(Math.random() * 360);
@@ -474,6 +634,11 @@ window.generateTestData = () => {
     }
     updateTable(); drawRadar();
 };
+
+/**
+ * @brief Calculates the estimated direction of the signal source.
+ * Uses a weighted vector sum algorithm.
+ */
 window.calculateSource = () => {
     const validPoints = mapData.filter(d => d.rssi > -100);
     if(validPoints.length < 3) { els.predResult.innerText="NEED DATA"; return; }
@@ -490,13 +655,23 @@ window.calculateSource = () => {
 
 // --- Live Chart Logic ---
 const liveCtx = els.liveChart.getContext('2d');
+
+/**
+ * @brief Resizes the live RSSI chart canvas.
+ */
 function resizeLiveChart() { if(els.liveChart.parentElement.offsetWidth > 0) { els.liveChart.width = els.liveChart.parentElement.offsetWidth; els.liveChart.height = els.liveChart.parentElement.offsetHeight; drawLiveChart(); } }
 
+/**
+ * @brief Opens the current live chart as an image in a new window.
+ */
 window.openLiveChartImage = () => {
     const w = window.open("");
     w.document.write('<img src="' + els.liveChart.toDataURL() + '"/>');
 };
 
+/**
+ * @brief Renders the live RSSI chart.
+ */
 function drawLiveChart() {
     if(currentTab!=='live') return;
     const w=els.liveChart.width, h=els.liveChart.height, C=getTheme();

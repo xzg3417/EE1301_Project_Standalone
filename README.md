@@ -229,6 +229,27 @@ The project is designed to be minimal and portable.
     *   Repeat for multiple angles (East, South, West).
     *   Click **CALC SOURCE** to visualize the estimated vector arrow.
 
-## 8. Future Improvements & Reflection
+## 8. Development
 
-3.  
+This section provides information for developers who wish to modify or extend the project.
+
+### 8.1 Files Structure
+
+*   `src/project.cpp`: The C++ firmware source code for the Particle Photon 2.
+*   `script.js`: The frontend logic (Vanilla JavaScript).
+*   `index.html`: The main user interface structure.
+*   `style.css`: The styling for the user interface.
+
+### 8.2 Coding Standards
+
+*   **C++ (Firmware)**: Follows standard C++ conventions. Use Doxygen-style comments (`/** ... */`) for documenting functions.
+*   **JavaScript (Frontend)**: Follows standard JavaScript conventions. Use JSDoc (`/** ... */`) for documenting functions and variables.
+
+### 8.3 Extending the Project
+
+*   To add new serial commands, update the command parsing logic in `src/project.cpp` (in `loop()`) and add a corresponding sender function in `script.js`.
+*   To modify the UI, edit `index.html` and `style.css`. `script.js` handles the dynamic behavior and canvas rendering.
+
+## 9. Future Improvements & Reflection
+
+3.

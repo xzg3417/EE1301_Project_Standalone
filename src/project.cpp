@@ -10,7 +10,14 @@ String macToString(const uint8_t* mac);
 String securityToString(int security);
 
 // State Definitions
-enum State { STATE_IDLE, STATE_SCANNING, STATE_TRACKING };
+/**
+ * @brief Enum representing the device's operational states.
+ */
+enum State {
+    STATE_IDLE,     /**< Device is waiting for commands. */
+    STATE_SCANNING, /**< Device is performing a full WiFi scan. */
+    STATE_TRACKING  /**< Device is actively tracking a specific target SSID. */
+};
 
 State currentState = STATE_IDLE;
 
@@ -22,6 +29,12 @@ WiFiAccessPoint aps[50];
 unsigned long lastUpdate = 0;
 unsigned long lastStatusReport = 0;
 
+/**
+ * @brief Initializes the device hardware and settings.
+ *
+ * Sets up the Serial communication at 115200 baud, selects the external antenna,
+ * and sends an initial boot message.
+ */
 void setup() {
     Serial.begin(115200);
     WiFi.selectAntenna(ANT_EXTERNAL);
@@ -29,6 +42,12 @@ void setup() {
     sendLog("INFO", "System Booted. Radar Engine v10.");
 }
 
+/**
+ * @brief Main execution loop of the firmware.
+ *
+ * This function handles serial command parsing, executes the state machine logic,
+ * and manages periodic status reporting.
+ */
 void loop() {
     // 1. Process Serial Commands
     if (Serial.available() > 0) {
@@ -92,7 +111,13 @@ void loop() {
     }
 }
 
-// Report device status (comma separated to avoid MAC address conflicts)
+/**
+ * @brief Reports the current device status via Serial.
+ *
+ * Sends a CSV-formatted string containing connection status, SSID, IP address,
+ * RSSI (normalized), Gateway IP, Subnet Mask, and MAC address.
+ * Format: STATUS:DEVICE:CONNECTED,SSID,IP,RSSI,GW,MASK,MAC
+ */
 void reportDeviceStatus() {
     if (WiFi.ready()) {
         Serial.print("STATUS:DEVICE:CONNECTED,");
@@ -121,6 +146,14 @@ void reportDeviceStatus() {
     }
 }
 
+/**
+ * @brief Sends a log message via Serial.
+ *
+ * Formats the message as "LOG:<level>:<msg>".
+ *
+ * @param level The severity level of the log (e.g., "INFO", "ERROR").
+ * @param msg The log message content.
+ */
 void sendLog(String level, String msg) {
     Serial.print("LOG:");
     Serial.print(level);
@@ -128,6 +161,13 @@ void sendLog(String level, String msg) {
     Serial.println(msg);
 }
 
+/**
+ * @brief Performs a full WiFi spectrum scan.
+ *
+ * Scans for available WiFi networks and prints the results via Serial.
+ * Each network is printed with the format: LIST:SSID,RSSI,CHANNEL,BSSID,SECURITY.
+ * Sends "STATUS:SCAN_START" before starting and "STATUS:SCAN_END" after completion.
+ */
 void performFullScan() {
     Serial.println("STATUS:SCAN_START");
     sendLog("INFO", "Scanning spectrum...");
@@ -154,6 +194,14 @@ void performFullScan() {
     Serial.println("STATUS:SCAN_END");
 }
 
+/**
+ * @brief Pings a target host a specified number of times.
+ *
+ * Sends ICMP ping requests to the target and logs the result.
+ *
+ * @param target The hostname or IP address to ping.
+ * @param count The number of ping attempts (default is 5 if count <= 0).
+ */
 void performPing(String target, int count) {
     if (count <= 0)
         count = 5;
@@ -183,6 +231,13 @@ void performPing(String target, int count) {
                         String(success) + ", Lost=" + String(count - success));
 }
 
+/**
+ * @brief Tracks a specific WiFi network target.
+ *
+ * Performs a scan and filters for the target SSID. If found, sends the
+ * strongest signal data via Serial.
+ * Format: DATA:RSSI,CHANNEL,BSSID
+ */
 void performStableTracking() {
     // Core Tracking Logic: Full Channel Scan
     int found = WiFi.scan(aps, 50);
@@ -218,6 +273,12 @@ void performStableTracking() {
     }
 }
 
+/**
+ * @brief Converts a MAC address array to a string.
+ *
+ * @param mac A pointer to the 6-byte MAC address array.
+ * @return A String representation of the MAC address (e.g., "00:11:22:33:44:55").
+ */
 String macToString(const uint8_t* mac) {
     char buf[20];
     snprintf(buf, sizeof(buf), "%02X:%02X:%02X:%02X:%02X:%02X", mac[0], mac[1],
@@ -225,6 +286,12 @@ String macToString(const uint8_t* mac) {
     return String(buf);
 }
 
+/**
+ * @brief Converts a WiFi security integer to a string description.
+ *
+ * @param security The integer representing the security type.
+ * @return A String describing the security type (e.g., "WPA2", "OPEN").
+ */
 String securityToString(int security) {
     switch (security) {
     case WLAN_SEC_UNSEC:
