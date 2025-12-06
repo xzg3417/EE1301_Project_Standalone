@@ -25,13 +25,20 @@
 
 Unlike standard Wi-Fi scanners that simply list available networks, Signal Hunter treats signal strength (RSSI) as a vector quantity (magnitude and direction), enabling a "Radar" visualization approach.
 
-![PSCR-2025.12.05.20.27.37](https://github.com/xzg3417/EE1301_Project_Standalone/blob/main/screenshots/PSCR-2025.12.05.20.27.37.png)
+![light-live_monitor](https://github.com/xzg3417/EE1301_Project_Standalone/blob/main/screenshots/light-live_monitor)
 
-![img](https://github.com/xzg3417/EE1301_Project_Standalone/blob/main/screenshots/img.png)
+![light-plot](https://github.com/xzg3417/EE1301_Project_Standalone/blob/main/screenshots/img.png)
 
-![image-20251205135434517](https://github.com/xzg3417/EE1301_Project_Standalone/blob/main/screenshots/image-20251205135434517.png)
+![light-manual_mapping](https://github.com/xzg3417/EE1301_Project_Standalone/blob/main/screenshots/light-manual_mapping.png)
 
-![image-20251205135601265](https://github.com/xzg3417/EE1301_Project_Standalone/blob/main/screenshots/image-20251205135601265.png)
+![light-ping_tool](https://github.com/xzg3417/EE1301_Project_Standalone/blob/main/screenshots/light-ping_tool.png)
+
+![dark-live_monitor](https://github.com/xzg3417/EE1301_Project_Standalone/blob/main/screenshots/dark-live_monitor.png)
+
+![dark-manual_mapping](https://github.com/xzg3417/EE1301_Project_Standalone/blob/main/screenshots/dark-manual_mapping.png)
+
+![dark-ping_tool](https://github.com/xzg3417/EE1301_Project_Standalone/blob/main/screenshots/dark-ping_tool.png)
+
 
 ## 2. System Architecture
 
