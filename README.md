@@ -7,10 +7,12 @@
 **NOTES**
 
 - Gemini
+  - Generate shell commands to separate project directory via Git
   - Fix state diagram parsing error in Mermaid
     - Replaced literal colons (:) with HTML entity #58; in the "TRACK" command label. 
     The literal colons were conflicting with Mermaid's syntax separators, causing the graph rendering to fail.
     - ai -> local & fix -> review & learn => easier to solve similar issues
+  - 
 - Jules
   - PR - Fix sampling bias in source estimation #19
 - Vector Math Verification: The `atan2` formula for converting 0-North coordinates was verified using AI to ensure the $90^\circ$ offset logic was correct.
@@ -51,7 +53,7 @@ The system operates on a Host-Client architecture where the Particle Photon 2 ac
 
 ```mermaid
 graph TD
-    subgraph "Hardware (Particle Photon 2)"
+    subgraph "Hardware (Photon 2)"
         A[WiFi Radio] -->|Scan/RSSI| B[Firmware State Machine]
         B -->|Serial UART| C[USB Interface]
     end
