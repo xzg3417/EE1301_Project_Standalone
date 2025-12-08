@@ -10,6 +10,7 @@ let mapTarget = { ssid: "", channel: 0 };
 let mapData = [], measurementID = 1, isMeasuring = false, currentSamples = [], requiredSamples = 2;
 let predictedAngle = null, radarPoints = [], hoveredPointId = null;
 let isLightMode = true;
+let shouldAutoRotate = false;
 
 // --- DOM Elements Reference ---
 const els = {
@@ -219,6 +220,21 @@ function processLine(line) {
         log("SYS", "SCANNING...");
     }
     else if (line.startsWith("LOG:")) log("DEV", line.substring(4));
+    else if (line.startsWith("EVENT:BUTTON_PRESSED")) handleButtonPress();
+}
+
+function handleButtonPress() {
+    if (currentTab !== 'map') {
+        log("WARN", "Button ignored: Not in Manual Mapping mode.");
+        return;
+    }
+    if (isMeasuring) {
+        log("WARN", "Button ignored: Sampling in progress.");
+        return;
+    }
+
+    log("INFO", "Button pressed. Initiating sampling...");
+    startMeasurement(true);
 }
 
 function addNetwork(ssid, rssi, ch, bssid, sec) {
@@ -358,14 +374,18 @@ window.addEventListener('mousemove', (e) => { if (isDraggingDial) setAngleFromEv
 window.addEventListener('mouseup', () => { isDraggingDial = false; });
 if (els.angleInput) els.angleInput.addEventListener('change', () => { dialAngle = (parseFloat(els.angleInput.value) || 0) % 360; updateDialUI(); });
 
-if (els.measureBtn) els.measureBtn.addEventListener('click', () => {
+if (els.measureBtn) els.measureBtn.addEventListener('click', () => startMeasurement(false));
+
+function startMeasurement(autoRotate) {
     if (!isConnected || !mapTarget.ssid) { log("ERR", "Connect/Target req."); return; }
     isMeasuring = true; currentSamples = [];
+    shouldAutoRotate = autoRotate;
     requiredSamples = parseInt(els.sampleInput.value) || 2;
     els.measureBtn.disabled = true; els.measureBtn.innerText = "SAMPLING...";
     els.statText.innerText = `0 / ${requiredSamples}`; els.progBar.style.width = "0%";
     sendCommand(`TRACK:${mapTarget.ssid}:${mapTarget.channel}`);
-});
+}
+
 function handleMapData(rssi) {
     if (!isMeasuring || rssi <= -100) return;
     currentSamples.push(rssi);
@@ -378,6 +398,13 @@ function finishMeasurement() {
     let avg = Math.round(currentSamples.reduce((a, b) => a + b, 0) / currentSamples.length);
     mapData.push({ id: measurementID++, angle: dialAngle, rssi: avg, rawSamples: [...currentSamples] });
     updateTable(); drawRadar(); log("MAP", `Saved: ${avg}dBm @ ${dialAngle}°`);
+
+    if (shouldAutoRotate) {
+        dialAngle = (dialAngle + 22.5) % 360;
+        updateDialUI();
+        shouldAutoRotate = false;
+        log("INFO", "Compass rotated to " + dialAngle + "°");
+    }
 }
 
 const radarCtx = els.radar.getContext('2d');

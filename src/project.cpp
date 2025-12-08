@@ -22,14 +22,31 @@ WiFiAccessPoint aps[50];
 unsigned long lastUpdate = 0;
 unsigned long lastStatusReport = 0;
 
+// Button Logic
+const int BUTTON_PIN = D3;
+bool buttonPressed = false;
+unsigned long lastButtonPress = 0;
+
 void setup() {
     Serial.begin(115200);
     WiFi.selectAntenna(ANT_EXTERNAL);
+    pinMode(BUTTON_PIN, INPUT_PULLUP);
     delay(2000);
     sendLog("INFO", "System Booted. Radar Engine v10.");
 }
 
 void loop() {
+    // 0. Button Logic
+    if (digitalRead(BUTTON_PIN) == LOW) {
+        if (!buttonPressed && (millis() - lastButtonPress > 200)) {
+            buttonPressed = true;
+            Serial.println("EVENT:BUTTON_PRESSED");
+            lastButtonPress = millis();
+        }
+    } else {
+        buttonPressed = false;
+    }
+
     // 1. Process Serial Commands
     if (Serial.available() > 0) {
         String cmd = Serial.readStringUntil('\n');
