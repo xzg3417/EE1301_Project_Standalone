@@ -239,7 +239,6 @@ The application includes features to ensure data quality:
 The project is designed to be minimal and portable.
 
 *   **Core Component:** Particle Photon 2.
-*   **Core Component:** Particle Photon 2
 *   **Connection:** Micro-USB cable to Host PC/Laptop.
 *   **Optional Directional Shield:** To improve the accuracy of the "Manual Sweeping" process, a simple parabolic reflector (aluminum foil curved behind the antenna) can be used to create physical directionality.
 *   **Optional Physical Button:** A physical button can be used on D3 for better efficiency. It uses `INPUT_PULLDOWN` and detects a `HIGH` signal. When it detects a click it performs a scan using the current parameters. After the scan is complete it passes the data to the WebUI and automatically increase the angle on the dial by 22.5 degrees.
