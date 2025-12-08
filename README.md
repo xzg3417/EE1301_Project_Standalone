@@ -2,30 +2,10 @@
 
 **Demo:** https://xzg3417.github.io/EE1301_Project_Standalone/web_interface
 
-## 0. Memo
-
-**NOTES**
-
-- remove ./test add usage
-
-- Gemini
-  - Generate shell commands to separate project directory via Git
-  - Fix state diagram parsing error in Mermaid
-    - Replaced literal colons (:) with HTML entity #58; in the "TRACK" command label. 
-    The literal colons were conflicting with Mermaid's syntax separators, causing the graph rendering to fail.
-    - ai -> local & fix -> review & learn => easier to solve similar issues
-  - 
-- Jules
-  - PR - Fix sampling bias in source estimation #19
-- Vector Math Verification: The `atan2` formula for converting 0-North coordinates was verified using AI to ensure the $90^\circ$ offset logic was correct.
-
-**TODO**
-
-- circuit diagram [Cirkit Designer IDE](https://app.cirkitdesigner.com/project/13b6fb36-6e30-4229-a311-8fd118ea0a41)
 
 ## 1. Project Overview
 
-**Signal Hunter** is a semi-automated IoT tool designed to visualize the invisible landscape of Wi-Fi signals. By combining a **Particle Photon 2** hardware scanner with a sophisticated **Web Serial** frontend, the system allows users to perform directional signal mapping, track specific networks in real-time, and mathematically estimate the physical location of a signal source.
+This project is a semi-automated IoT tool designed to visualize the invisible landscape of Wi-Fi signals. By combining a **Particle Photon 2** hardware scanner with a sophisticated **Web Serial** frontend, the system allows users to perform directional signal mapping, track specific networks in real-time, and mathematically estimate the physical location of a signal source.
 
 Unlike standard Wi-Fi scanners that simply list available networks, Signal Hunter treats signal strength (RSSI) as a vector quantity (magnitude and direction), enabling a "Radar" visualization approach.
 
@@ -42,6 +22,10 @@ Unlike standard Wi-Fi scanners that simply list available networks, Signal Hunte
 ![dark-manual_mapping](https://github.com/xzg3417/EE1301_Project_Standalone/blob/main/screenshots/dark-manual_mapping.png)
 
 ![dark-ping_tool](https://github.com/xzg3417/EE1301_Project_Standalone/blob/main/screenshots/dark-ping_tool.png)
+
+![project_breadboard-layout](https://github.com/xzg3417/EE1301_Project_Standalone/blob/main/hardware/project_breadboard-layout.png)
+
+![project_schematic](https://github.com/xzg3417/EE1301_Project_Standalone/blob/main/hardware/project_schematic.png)
 
 
 ## 2. System Architecture

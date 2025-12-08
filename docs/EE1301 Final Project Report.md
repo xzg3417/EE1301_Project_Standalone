@@ -6,11 +6,12 @@
         justify-content: center !important;
     }
     .md-diagram-panel svg {  
-        max-height: 800px !important; 
+        max-height: 600px !important; 
         width: auto !important; 
     }
 }
 </style>
+
 
 
 <div align="center" style="margin-top: 250px;"> <h1 style="font-size: 3.5em; line-height: 1.2; margin-bottom: 20px;">EE1301 Final Project Report
@@ -20,9 +21,8 @@
 
 <p style="font-size: 1.3em;" align="center"> <strong>Due Date:</strong> December 9, 2025 </p> 
 
-
-<p style="font-size: 1em;" align="center"> <strong>Github:</strong> https://github.com/xzg3417/EE1301_Project_Standalone </p> </div> <div style="page-break-after: always;"></div>
-
+<p style="font-size: 1em;" align="center"> <strong>Github:</strong> https://github.com/xzg3417/EE1301_Project_Standalone </p>
+</div> <div style="page-break-after: always;"></div>
 
 
 ## 1. Project Description
@@ -43,6 +43,7 @@ To understand the necessity of this diagnostic tool, it is essential to review t
 A critical factor in this budget is the physical integration of the device. When an IoT module is placed inside a product enclosure, the casing material (plastic, metal, or glass) acts as a dielectric that can detune the antenna or attenuate the signal—a phenomenon known as **enclosure de-tuning** or **insertion loss**. Furthermore, the choice between an internal PCB antenna (compact but prone to interference) and an external dipole antenna (higher gain but bulky) significantly alters the device's radiation pattern. This project provides the necessary feedback loop to visualize these impacts empirically, allowing developers to quantify the "penalty" of a specific enclosure or the "gain" of an external antenna in real-world environments.
 
 ### 1.3 Related Work
+
 Signal testing and RF validation are established practices in the telecommunications industry, typically performed using tools that range from enterprise software to high-end laboratory hardware.
 
 - **Professional OTA Testing (Anechoic Chambers):** In high-level industrial applications, verifying an embedded device's antenna performance and enclosure impact is performed via **Over-The-Air (OTA)** testing in an anechoic chamber using Vector Network Analyzers (VNA) from manufacturers like **Rohde & Schwarz** or **Keysight**. While these setups provide precise 3D radiation patterns, they are prohibitively expensive and immobile. This project offers a "pre-compliance" style alternative, allowing developers to perform approximate comparative testing of enclosures on a desktop without renting a lab.
@@ -53,6 +54,9 @@ Signal testing and RF validation are established practices in the telecommunicat
 - **Vendor-Specific RF Tools:** Chip manufacturers often provide proprietary tools, such as the **Espressif RF Test Tool** or **TI SmartRF Studio**. While effective, these are often restricted to specific chipsets, require heavy driver installation, and lack intuitive visualizations. By contrast, this project utilizes the modern **Web Serial API** to create a driverless, cross-platform diagnostic interface that focuses specifically on the *application-layer* connectivity experience of the Photon 2.
 
 ### 1.4 Solution Overview
+
+> Screenshots attached in `3. Results and Reflection` section of this document.
+
 #### System Architecture
 
 **Device**: Photon 2 (Device OS 6.3.3)
@@ -75,7 +79,7 @@ graph TD
     end
 ```
 
-#### Hardware Implementation (C++)
+#### Hardware Implementation (Firmware)
 
 The firmware (`project.cpp`) utilizes a non-blocking **Finite State Machine (FSM)** to manage radio resources. This ensures the device remains responsive to serial commands even while performing heavy scanning operations.
 
@@ -83,7 +87,11 @@ The firmware (`project.cpp`) utilizes a non-blocking **Finite State Machine (FSM
 *   **Scanning State:** Executes `WiFi.scan()` to retrieve a full list of APs (SSID, RSSI, Channel, Security).
 *   **Tracking State:** Locks onto a specific target (SSID + Channel) and samples RSSI at the maximum refresh rate allowed by the hardware (~10-20Hz).
 
-#### Serial Communication Protocol
+#### Software Implementation (GUI)
+
+@jules 补全这一部分 关于webui前端以及后端
+
+##### Serial Communication Protocol
 
 To ensure data integrity over the USB serial link, a custom ASCII-based protocol was designed:
 
@@ -99,29 +107,38 @@ To ensure data integrity over the USB serial link, a custom ASCII-based protocol
 
 The project consists of the following key components:
 
-1.  **Hardware (Sensors & Connectivity):**
+1. **Hardware (Sensors & Connectivity):**
 
-    > Optional components are used and tested to function correctly. 
-    >
-    > However, they are not the nessesary parts.
+   > Optional components are used and tested to function correctly. 
+   >
+   > However, they are not the nessesary parts.
 
-    * **Particle Photon 2:** Used as the primary Wi-Fi radio sensor. It leverages the Broadcom Wi-Fi module to perform active scanning and RSSI measurement.
-    * **USB Serial Interface:** Provides a reliable, low-latency link between the hardware and the web host, eliminating the need for complex cloud backends for real-time data visualization.
-    * **Directional Mapping (Manual):** Directionality is achieved through "Manual Sweeping"—the user rotates the device.
-    * **Optional Directional Shield:** To improve the accuracy of the "Manual Sweeping" process, a simple parabolic reflector (aluminum foil curved behind the antenna) can be used to create physical directionality.
-    * **Optional Physical Button:** A physical button can be used on D3 for better efficiency. It uses `INPUT_PULLDOWN` and detects a `HIGH` signal. When it detects a click it performs a scan using the current parameters. After the scan is complete it passes the data to the WebUI and automatically increase the angle on the dial by 22.5 degrees.
+   * **Particle Photon 2:** Used as the primary Wi-Fi radio sensor. It leverages the Broadcom Wi-Fi module to perform active scanning and RSSI measurement.
+   * **USB Serial Interface:** Provides a reliable, low-latency link between the hardware and the web host, eliminating the need for complex cloud backends for real-time data visualization.
+   * **Directional Mapping (Manual):** Directionality is achieved through "Manual Sweeping"—the user rotates the device.
+   * **Optional Directional Shield:** To improve the accuracy of the "Manual Sweeping" process, a simple parabolic reflector (aluminum foil curved behind the antenna) can be used to create physical directionality.
+   * **Optional Physical Button:** A physical button can be used on D3 for better efficiency. It uses `INPUT_PULLDOWN` and detects a `HIGH` signal. When it detects a click it performs a scan using the current parameters. After the scan is complete it passes the data to the WebUI and automatically increase the angle on the dial by 22.5 degrees.
+   
+   > Picutres attached in `Appendix A: Electrical Schematic` of this document.
 
-2.  **Software (Interface):**
-    * **Web Serial API:** Enables direct communication between the Chrome browser and the microcontroller.
-    * **Canvas API:** Renders the high-performance radar plot and the custom "Magnetic" control dial.
 
-### 1.6 Applications
+2. **Software (Interface):**
+
+
+   * **Firmware:** `project.cpp` that runs on Photon 2.
+
+
+   * **WebUI:** `index.html` `script.js`  `style.css` builds a web based GUI for monitor and control.
+
+
+
+### 1.6 Applications (Possibilities)
 **1. Rapid Prototyping & Enclosure Validation** The primary application of this tool is the empirical testing of IoT product enclosures. As discussed in the *Background*, materials such as ABS plastic or acrylic can act as dielectrics that detune antennas.
- By placing the Photon 2 inside a prototype 3D-printed case and monitoring the Live Chart for RSSI drops (insertion loss), mechanical engineers and industrial designers can rapidly validate if a specific casing material or thickness severely impacts connectivity before committing to expensive injection molding.
+By placing the Photon 2 inside a prototype 3D-printed case and monitoring the Live Chart for RSSI drops (insertion loss), mechanical engineers and industrial designers can rapidly validate if a specific casing material or thickness severely impacts connectivity before committing to expensive injection molding.
 
 **2. Antenna Selection & Orientation Strategy** This system serves as a low-cost platform for comparing the radiation efficiency of the Photon 2's onboard PCB trace antenna versus external dipole antennas connected via u.FL.
- By utilizing the "Radar Visualization" mode, developers can map the "blind spots" (nulls) of an antenna.
- This allows for data-driven decisions on how to orient a device during installation—ensuring the antenna’s gain lobe is directed towards the Access Point rather than a null, which is critical for stationary IoT devices like smart meters or environmental sensors.
+By utilizing the "Radar Visualization" mode, developers can map the "blind spots" (nulls) of an antenna.
+This allows for data-driven decisions on how to orient a device during installation—ensuring the antenna’s gain lobe is directed towards the Access Point rather than a null, which is critical for stationary IoT devices like smart meters or environmental sensors.
 
 **3. Educational Visualization of RF Propagation** For academic and educational environments (such as EE 1301), the tool transforms abstract RF concepts into visible data. It demonstrates real-world wave propagation phenomena, such as:
 
@@ -184,9 +201,7 @@ The final angle is normalized to the $[0, 360)$ range.
 
 To ensure the system is usable in real-world field testing, the WebUI was designed with a focus on **high-contrast data visualization** and **tactile input simulation**. The interface allows for precise control over the hardware without requiring text-based commands.
 
-> WebUI features includes:
->
-> 
+@jules 补全这一部分features简介 简介后面是已经写好的给个别样例介绍
 
 #### Interaction Event Loop
 
@@ -316,10 +331,22 @@ The application includes features to ensure data quality:
 ## 3. Results and Reflection
 
 ### 3.1 Results
-The system successfully demonstrates real-time visualization of Wi-Fi signals.
-* **Live Monitor:** Successfully tracks signal stability over time.
-* **Manual Mapping / Radar Plot:** Visualizes the directional strength of the signal.
-  * **Source Estimation:** The yellow dashed line on the radar plot indicates the calculated direction of the source.
+
+![light-live_monitor](https://github.com/xzg3417/EE1301_Project_Standalone/blob/main/screenshots/light-live_monitor.png)
+
+![light-plot](https://github.com/xzg3417/EE1301_Project_Standalone/blob/main/screenshots/light-plot.png)
+
+![light-manual_mapping](https://github.com/xzg3417/EE1301_Project_Standalone/blob/main/screenshots/light-manual_mapping.png)
+
+![light-ping_tool](https://github.com/xzg3417/EE1301_Project_Standalone/blob/main/screenshots/light-ping_tool.png)
+
+![dark-live_monitor](https://github.com/xzg3417/EE1301_Project_Standalone/blob/main/screenshots/dark-live_monitor.png)
+
+![dark-manual_mapping](https://github.com/xzg3417/EE1301_Project_Standalone/blob/main/screenshots/dark-manual_mapping.png)
+
+![dark-ping_tool](https://github.com/xzg3417/EE1301_Project_Standalone/blob/main/screenshots/dark-ping_tool.png)
+
+@ jules 补全这一部分 include some key features
 
 #### 3.1.1 Case Study: DIY "Windsurfer" Directional Antenna
 
@@ -332,10 +359,14 @@ To empirically validate the system's directional mapping capabilities, I constru
 - **Conclusion:** This experiment demonstrated that This project is sensitive enough to detect and visualize the effects of physical antenna modifications, proving its utility as a low-cost RF educational tool.
 
 ### 3.2 Challenges & Solutions
-During development, several challenges were encountered:
-1.  **Mermaid Diagram Parsing:** There was a conflict between the literal colons in the state diagram and the Mermaid syntax. This was resolved by using HTML entities (`#58;`) for the labels.
-2.  **Vector Math Verification:** Ensuring the coordinate system matched (0 degrees = North vs 0 degrees = East in Math) required careful verification of the `atan2` logic.
-3.  **Source Sampling Bias:** Initially, raw data fluctuated too much. A logic fix was implemented to average `N` samples before recording a data point to act as a low-pass filter.
+During development, challenges were encountered includes:
+1.  **Hardware - Directional Antenna:**
+    - The initial proposal was to built a cantenna out of a can. However, due to the reasons mentioned below in `3.3 Reflection & AI Tool Effectiveness`, I do not have the SMA terminal and feeder line to buid it. This problem is resolved by adding a parabolic reflector to the PCB omnidirectional antenna. Although comparison between the antennas could not be performed, the DIY antenna enables the device to function propoerly.
+2.  **Code - HTML/JS/CSS Syntax:** 
+    - AI contributes most of the css and html implementation and bug fixes since I am not familiar with it.
+    - There was a conflict between the literal colons in the state diagram and the Mermaid syntax. This was resolved by using HTML entities (`#58;`) for the labels.
+3.  **Algorithem -  Vector Math Verification:** Ensuring the coordinate system matched (0 degrees = North vs 0 degrees = East in Math) required careful verification of the `atan2` logic.
+4.  **Algorithem - Source Sampling Bias:** Initially, raw data fluctuated too much. A logic fix was implemented to average `N` samples before recording a data point to act as a low-pass filter.
 
 ### 3.3 Reflection & AI Tool Effectiveness
 #### Project Status
@@ -348,7 +379,14 @@ But, simple modifications are sufficient to enable fully automated scanning.
 
 #### Future Improvements
 
-> - 目前主要针对横屏鼠标操作优化，不完美适配手机以及触屏交互逻辑
+@jules 将以下翻译为英文并润色
+
+- 目前主要针对横屏鼠标操作优化，不完美适配手机以及触屏交互逻辑
+- full automated scanning
+- faster scanning (however it due to restrictions of the photon 2 hareware, replacing the module might be necessary)
+- a better designed directional antenna
+- algorithem for the angle calculation
+  - @jules 提供能够显著提升准确度的可行方案
 
 #### AI Effectiveness
 
@@ -381,7 +419,9 @@ But, simple modifications are sufficient to enable fully automated scanning.
 ## Appendices
 
 ### Appendix A: Electrical Schematic
-> *(Insert Schematic Image)*
+![project_breadboard-layout](https://github.com/xzg3417/EE1301_Project_Standalone/blob/main/hardware/project_breadboard-layout.png)
+
+![project_schematic](https://github.com/xzg3417/EE1301_Project_Standalone/blob/main/hardware/project_schematic.png)
 
 <div STYLE="page-break-after: always;"></div>
 
@@ -652,24 +692,24 @@ String securityToString(int security) {
 }
 ```
 
-#### ./index.html
+#### ./web_interface/index.html
 
 > The code is not included in this document due to the requirement that “up to 15 pages of appendices including code excerpts, schematics, etc.”
 >
-> Please refer to GitHub https://github.com/xzg3417/EE1301_Project_Standalone 
+> Please refer to GitHub: https://github.com/xzg3417/EE1301_Project_Standalone 
 
-#### ./script.js
-
-> The code is not included in this document due to the requirement that “up to 15 pages of appendices including code excerpts, schematics, etc.”
->
-> Please refer to GitHub https://github.com/xzg3417/EE1301_Project_Standalone 
-
-
-#### ./style.css
+#### ./web_interface/script.js
 
 > The code is not included in this document due to the requirement that “up to 15 pages of appendices including code excerpts, schematics, etc.”
 >
-> Please refer to GitHub https://github.com/xzg3417/EE1301_Project_Standalone 
+> Please refer to GitHub: https://github.com/xzg3417/EE1301_Project_Standalone 
+
+
+#### ./web_interface/style.css
+
+> The code is not included in this document due to the requirement that “up to 15 pages of appendices including code excerpts, schematics, etc.”
+>
+> Please refer to GitHub: https://github.com/xzg3417/EE1301_Project_Standalone 
 
 <div STYLE="page-break-after: always;"></div>
 
@@ -680,7 +720,7 @@ String securityToString(int security) {
 - Gemini 3 Pro via jules.google.com (Contributes most to the WebUI’s frontend and backend)
 - Gemini 3 Pro via Google AI Studio
 - Gemini 3 Pro via gemini.google.com
-- GitHub Copilot via Visual Studio Code (For Inline completion only
+- GitHub Copilot via Visual Studio Code (For Inline completion only)
 - GitHub Copilot via GitHub Desktop (For commit message only)
 
 I started this project by constructing a outline and writing the main program (project.cpp), AI usage for this part includes evaluating feasibility, prompting for function usage/code syntax/bug fix and etc.
@@ -692,11 +732,155 @@ I started this project by constructing a outline and writing the main program (p
 - **Documentation Content** - README file, Final Project Report file, commit message
 - **Documentation Layout** - Markdown with html, LaTeX and mermaid,
 - **Naming** - suggestions on naming directories and function names are especially helpful
+- Also used for shell commands to manipulate GitHub repository when.
+  - My initial project directory was `./EE1301/project` .
+    AI was used to separate to the directory to `./EE1301_Project_Standalone` .
 
-#### **Prompt 1 ():**
 
-> 
+#### Usage Example
 
-#### **Prompt 2 ():**
+> There are too many prompts and relavent sessions/commits/pull requests. 
+>
+> However, all version history since the repository is created are kept. Session links, chat history and other proof can be provided upon request.
+>
+> Here are some examples of AI usage.
+##### Code
 
-> 
+1. ##### UI Improvements: Resizer Fix, Zoom UI Polish, Manual Mapping Readability #16
+
+   **Description:** This PR addresses the user feedback:
+
+   1. **Fixed Live Monitor Resizer**: The resizer between Networks and Main Chart in Live Monitor view is now functional. Fixed `script.js` element fetching logic and added CSS `pointer-events: auto`.
+   2. **Improved Zoom UI**: Replaced text buttons with icon buttons in a cleaner pill container, removing the percentage display as requested. Added Light Mode overrides for these buttons.
+   3. Fixed Light Mode Readability:
+      - Manual Mapping "Mode" button is now properly styled in light mode.
+      - Table "Raw Data" sub-rows now have appropriate light background and dark text in light mode.
+
+   Verified with Playwright (resizer dragging works, UI looks correct).
+
+   **Prompt:**
+
+   ```
+   检查亮色模式配色导致的可读性问题（暗色模式没有这个问题不需要修改）。
+   第一页的网络选择和图表之间也加上和别的模块之间一样的拖动调整大小的方式。
+   为页面添加缩放功能，并确保缩放后ui显示正常。进行横竖屏优化。
+   ```
+
+   ```
+   manual mapping下的mode按钮底色以及raw数据在表格底色展开后的在两色模式仍然是非常深的颜色。修复可读性问题。 然后优化这个加减按钮 能不能做的更好看甚至考虑去掉百分比显示 还有就是虽然你加了livemoniter下networks和图表之间的拖动功能 但是实际上无法拖动 请修复
+   ```
+
+   ```
+   将调整大小的加减号风格统一为当前页面设计风格，然后放在最右上角最好能实现放大缩小不需要移动鼠标位置 修复ANALYTICS & DATA内的内容并不会被缩放的bug
+   ```
+
+   ```
+   加减按钮改为连体设计，确保居中。连体的加减按钮采用上下布局放在右下角
+   ```
+
+   ```
+   class="flex-1 overflow-hidden relative"也就是中间的那一块容器左右两侧稍微有些不居中 我希望这一块能够对齐其他板块。保持设计一致性
+   ```
+
+   **Result:**
+
+   >Refer to GitHub pull request `UI Improvements: Resizer Fix, Zoom UI Polish, Manual Mapping Readability #16` .
+   >
+   >The result is too long to be attaced in the file.
+
+2. ##### Fix sampling bias in source estimation #19
+
+   **Description:** Fixed a sampling bias bug in the source direction estimation algorithm. Previously, taking multiple measurements at a weak signal angle could incorrect skew the result away from a stronger signal measured fewer times. The fix involves averaging RSSI per angle before performing the weighted vector sum. Added a regression test to verify the fix.
+
+   **Prompt:**
+
+   > This is a built-in demo prompt.
+
+   ```
+   Your task is to find and fix a single, verifiable bug within this repository. Please follow these steps meticulously:
+   
+   Codebase Analysis & Bug Identification: Systematically analyze the codebase to identify a potential bug. This could be a logical error, an unhandled edge case, or a deviation from documented behavior. Prioritize bugs that are verifiable with a clear failure case.
+   
+   Detailed Bug Report: Before writing any code, provide a brief report explaining:
+   
+   The file and line number(s) where the bug is located.
+   A clear description of the bug and its impact on the user or system.
+   Your proposed strategy for fixing it.
+   Targeted Fix Implementation: Implement the most direct and clean fix for the identified bug. Avoid making unrelated refactors or style changes in the process.
+   
+   Verification Through Testing: To validate your fix, you must:
+   
+   Write a new test case that specifically fails before your fix and passes after it, proving the bug is resolved.
+   Run the entire existing test suite to ensure your changes have not introduced any regressions.
+   ```
+
+   **Result:** 
+
+   > Refer to GitHub pull request `Fix sampling bias in source estimation #19` .
+   >
+   > The result is too long to be attaced in the file.
+##### Documentation
+
+1. ##### Commit messsages and description
+   **Description:** Most of the commit messages and descirption are generated by AI.
+
+   **Prompt:**
+
+   > Does not require additional user-input.
+   
+   **Result:**
+   
+   ````
+   Removed header comments and reformatted code for consistent indentation and style. Added braces to single-line blocks, improved spacing, and clarified logic in command parsing and state machine sections. No functional changes were made.
+   ````
+   
+   ```
+   
+   * Fix Live Monitor resizer, improve zoom UI, and fix light mode readability in Manual Mapping
+   
+   * Fix light mode readability, add resizer to live monitor, and implement zoom with responsive layout
+   
+   * feat: Improve UI with Zoom, Resizer, and Light Mode fixes
+   
+   - Implemented drag-to-resize functionality for the Live Monitor sidebar.
+   - Added global zoom functionality with scaling UI (rem-based units).
+   - Redesigned Zoom controls: stacked vertical buttons in the bottom-right corner.
+   - Fixed readability issues in Light Mode (data table, buttons).
+   - Added responsive layout for portrait/mobile screens (stacking panels).
+   
+   * feat: Add Zoom, Live Resizer, and fix Light Mode/Alignment
+   
+   - Implemented drag-to-resize for Live Monitor sidebar.
+   - Added global zoom with stacked bottom-right controls.
+   - Converted hardcoded px text sizes to rem for proper scaling.
+   - Fixed Light Mode readability issues (table data, buttons).
+   - Fixed main view alignment by removing excess padding.
+   - Added responsive layout for portrait/mobile.
+   
+   * Update app version in index.html
+   
+   Changed displayed version from v21.1 to v0.0 in the Photon 2 Wi-Fi Signal Mapper header.
+   ```
+   
+1. ##### Markdown formatting, Mermaid graph, LaTeX formatting,
+
+   **Description:** Inspected formatting issues for `EE1301 Final Project Report.md`, `README.md`, and the initial proposal.
+
+   **Prompt:**
+
+   > Some examples only.
+
+   ```
+   provide a more detailed explanation of the algorithm implementation based on the existing README, you can cite some code snippets or add LaTeX or Markdown formulas for easier understanding. 讲解每一个技术细节
+   ```
+
+   ```
+   基于现有文档 根据@jules标签以及随后的指令完善文档
+   ```
+
+   **Result:**
+
+   > `EE1301 Final Project Report.md`, `README.md` and its components including graphs and equations all have AI contributed parts.
+   >
+   > There are modifications made.
+
