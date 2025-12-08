@@ -30,14 +30,14 @@ unsigned long lastButtonPress = 0;
 void setup() {
     Serial.begin(115200);
     WiFi.selectAntenna(ANT_EXTERNAL);
-    pinMode(BUTTON_PIN, INPUT_PULLUP);
+    pinMode(BUTTON_PIN, INPUT_PULLDOWN);
     delay(2000);
     sendLog("INFO", "System Booted. Radar Engine v10.");
 }
 
 void loop() {
     // 0. Button Logic
-    if (digitalRead(BUTTON_PIN) == LOW) {
+    if (digitalRead(BUTTON_PIN) == HIGH) {
         if (!buttonPressed && (millis() - lastButtonPress > 200)) {
             buttonPressed = true;
             Serial.println("EVENT:BUTTON_PRESSED");
