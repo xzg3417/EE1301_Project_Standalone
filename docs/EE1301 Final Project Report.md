@@ -331,24 +331,38 @@ The application includes features to ensure data quality:
 ## 3. Results and Reflection
 
 ### 3.1 Results
+@ jules 补全这一部分 include explaination of some key features here
 
-![light-live_monitor](https://github.com/xzg3417/EE1301_Project_Standalone/blob/main/screenshots/light-live_monitor.png)
+#### 3.1.1 GUI Preview
 
-![light-plot](https://github.com/xzg3417/EE1301_Project_Standalone/blob/main/screenshots/light-plot.png)
 
-![light-manual_mapping](https://github.com/xzg3417/EE1301_Project_Standalone/blob/main/screenshots/light-manual_mapping.png)
-
-![light-ping_tool](https://github.com/xzg3417/EE1301_Project_Standalone/blob/main/screenshots/light-ping_tool.png)
-
-![dark-live_monitor](https://github.com/xzg3417/EE1301_Project_Standalone/blob/main/screenshots/dark-live_monitor.png)
-
-![dark-manual_mapping](https://github.com/xzg3417/EE1301_Project_Standalone/blob/main/screenshots/dark-manual_mapping.png)
-
-![dark-ping_tool](https://github.com/xzg3417/EE1301_Project_Standalone/blob/main/screenshots/dark-ping_tool.png)
-
-@ jules 补全这一部分 include some key features
-
-#### 3.1.1 Case Study: DIY "Windsurfer" Directional Antenna
+<table border="0" style="width:100%; border-collapse: collapse; border: none;">
+  <tr style="border: none;">
+    <td width="50%" style="border: none; padding: 5px;">
+      <img src="https://github.com/xzg3417/EE1301_Project_Standalone/blob/main/screenshots/light-live_monitor.png?raw=true" width="100%">
+    </td>
+    <td width="50%" style="border: none; padding: 5px;">
+      <img src="https://github.com/xzg3417/EE1301_Project_Standalone/blob/main/screenshots/dark-live_monitor.png?raw=true" width="100%">
+    </td>
+  </tr>
+  <tr style="border: none;">
+    <td width="50%" style="border: none; padding: 5px;">
+      <img src="https://github.com/xzg3417/EE1301_Project_Standalone/blob/main/screenshots/light-manual_mapping.png?raw=true" width="100%">
+    </td>
+    <td width="50%" style="border: none; padding: 5px;">
+      <img src="https://github.com/xzg3417/EE1301_Project_Standalone/blob/main/screenshots/dark-manual_mapping.png?raw=true" width="100%">
+    </td>
+  </tr>
+  <tr style="border: none;">
+    <td width="50%" style="border: none; padding: 5px;">
+      <img src="https://github.com/xzg3417/EE1301_Project_Standalone/blob/main/screenshots/light-ping_tool.png?raw=true" width="100%">
+    </td>
+    <td width="50%" style="border: none; padding: 5px;">
+      <img src="https://github.com/xzg3417/EE1301_Project_Standalone/blob/main/screenshots/dark-ping_tool.png?raw=true" width="100%">
+    </td>
+  </tr>
+</table>
+#### 3.1.3 Case Study: DIY "Windsurfer" Directional Antenna
 
 To empirically validate the system's directional mapping capabilities, I constructed a **DIY "Windsurfer" parabolic reflector** using aluminum foil and cardstock. This simple modification was attached to the Photon 2's standard external omnidirectional antenna.
 
@@ -419,9 +433,16 @@ But, simple modifications are sufficient to enable fully automated scanning.
 ## Appendices
 
 ### Appendix A: Electrical Schematic
-![project_breadboard-layout](https://github.com/xzg3417/EE1301_Project_Standalone/blob/main/hardware/project_breadboard-layout.png)
-
-![project_schematic](https://github.com/xzg3417/EE1301_Project_Standalone/blob/main/hardware/project_schematic.png)
+<table border="0" style="width:100%; border-collapse: collapse; border: none;">
+  <tr style="border: none;">
+    <td width="50%" style="border: none; padding: 5px;">
+      <img src="https://github.com/xzg3417/EE1301_Project_Standalone/blob/main/hardware/project_breadboard-layout.png?raw=true" width="100%">
+    </td>
+    <td width="50%" style="border: none; padding: 5px;">
+      <img src="https://github.com/xzg3417/EE1301_Project_Standalone/blob/main/hardware/project_schematic.png?raw=true" width="100%">
+    </td>
+  </tr>
+</table>
 
 <div STYLE="page-break-after: always;"></div>
 
