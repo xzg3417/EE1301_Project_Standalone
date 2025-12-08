@@ -21,10 +21,7 @@
 
 **TODO**
 
-- html light/dark color scheme
-- button & code
 - circuit diagram [Cirkit Designer IDE](https://app.cirkitdesigner.com/project/13b6fb36-6e30-4229-a311-8fd118ea0a41)
-- description
 
 ## 1. Project Overview
 
@@ -99,15 +96,25 @@ The system uses a **Weighted Vector Sum** algorithm to predict the source angle.
 
 Raw RSSI is logarithmic ($dBm$). To perform vector addition, we convert this to a linear magnitude ($w$) representing approximate signal amplitude. We apply an offset ($+100$) to normalize the typical Wi-Fi floor.
 
-$$ w = 10^{\frac{RSSI + 100}{20}} $$
+$$
+w = 10^{\frac{RSSI + 100}{20}}
+$$
 
 ### 3.2 Vector Decomposition
 
 For every measurement point $i$ consisting of an angle $\theta_i$ and signal strength $RSSI_i$, we calculate the Cartesian components. Note that the UI treats $0^\circ$ as North, requiring a coordinate shift relative to standard trigonometric circles.
 
-$$ \theta'_{i} = (\theta_i - 90) \cdot \frac{\pi}{180} $$
-$$ x_{total} = \sum_{i=1}^{n} (w_i \cdot \cos(\theta'_i)) $$
-$$ y_{total} = \sum_{i=1}^{n} (w_i \cdot \sin(\theta'_i)) $$
+$$
+\theta'_{i} = (\theta_i - 90) \cdot \frac{\pi}{180}
+$$
+
+$$
+x_{total} = \sum_{i=1}^{n} (w_i \cdot \cos(\theta'_i))
+$$
+
+$$
+y_{total} = \sum_{i=1}^{n} (w_i \cdot \sin(\theta'_i))
+$$
 
 ### 3.3 Resultant Calculation
 The estimated source direction $\theta_{est}$ is the angle of the resultant vector formed by summing all weighted measurement vectors.
@@ -232,8 +239,10 @@ The application includes features to ensure data quality:
 The project is designed to be minimal and portable.
 
 *   **Core Component:** Particle Photon 2.
+*   **Core Component:** Particle Photon 2
 *   **Connection:** Micro-USB cable to Host PC/Laptop.
 *   **Optional Directional Shield:** To improve the accuracy of the "Manual Sweeping" process, a simple parabolic reflector (aluminum foil curved behind the antenna) can be used to create physical directionality.
+*   **Optional Physical Button:** A physical button can be used on D3 for better efficiency. It uses `INPUT_PULLDOWN` and detects a `HIGH` signal. When it detects a click it performs a scan using the current parameters. After the scan is complete it passes the data to the WebUI and automatically increase the angle on the dial by 22.5 degrees.
 
 ## 7. Setup & Usage
 
@@ -246,7 +255,3 @@ The project is designed to be minimal and portable.
     *   Rotate device to a direction (e.g., North), adjust the UI Dial to match, and click **MEASURE**. 
     *   Repeat for multiple angles (East, South, West).
     *   Click **CALC SOURCE** to visualize the estimated vector arrow.
-
-## 8. Future Improvements & Reflection
-
-3.  
