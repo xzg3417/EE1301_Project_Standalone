@@ -201,6 +201,24 @@ void performPing(String target, int count) {
 }
 
 void performStableTracking() {
+    // Optimization: If connected to the target, use instant RSSI
+    if (WiFi.ready() && String(WiFi.SSID()) == targetSSID) {
+        int rssi = (int8_t)WiFi.RSSI();
+
+        uint8_t bssid[6];
+        WiFi.BSSID(bssid);
+        String bssidStr = macToString(bssid);
+
+        // DATA:RSSI,CHANNEL,BSSID
+        Serial.print("DATA:");
+        Serial.print(rssi);
+        Serial.print(",");
+        Serial.print(targetChannel);
+        Serial.print(",");
+        Serial.println(bssidStr);
+        return;
+    }
+
     // Core Tracking Logic: Full Channel Scan
     int found = WiFi.scan(aps, 50);
 
