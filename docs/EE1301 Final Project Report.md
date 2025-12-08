@@ -89,7 +89,17 @@ The firmware (`project.cpp`) utilizes a non-blocking **Finite State Machine (FSM
 
 #### Software Implementation (GUI)
 
-@jules 补全这一部分 关于webui前端以及后端
+The Graphical User Interface (GUI) is a lightweight, single-page application (SPA) built using standard web technologies (**HTML5, CSS3, Vanilla JavaScript**) without reliance on heavy frameworks like React or Vue. This choice ensures minimal overhead and maximum performance for real-time data processing.
+
+*   **Frontend (UI Layer):**
+    *   **Structure:** `index.html` defines the layout, utilizing Flexbox and Grid for a responsive design that adapts to various screen sizes.
+    *   **Styling:** `style.css` manages the visual aesthetics, including a dynamic dark/light mode theme system and responsive adjustments for mobile devices.
+    *   **Visualization:** HTML5 Canvas is used for high-performance rendering of the Radar Chart and the Control Dial. This allows for smooth 60fps animations that would be sluggish with DOM-based rendering.
+
+*   **Backend (Browser-Side Processing):**
+    *   **Web Serial API:** The core connectivity logic resides in `script.js`. It leverages the modern `navigator.serial` API to establish a direct, driverless connection to the Photon 2 via USB.
+    *   **Data Pipeline:** Incoming serial data streams are decoded, buffered to handle fragmentation, and parsed into structured objects.
+    *   **State Management:** The application maintains a centralized state for the device connection status, scanning results, and mapping data, ensuring synchronization between the visual elements (charts) and the data tables.
 
 ##### Serial Communication Protocol
 
@@ -201,7 +211,13 @@ The final angle is normalized to the $[0, 360)$ range.
 
 To ensure the system is usable in real-world field testing, the WebUI was designed with a focus on **high-contrast data visualization** and **tactile input simulation**. The interface allows for precise control over the hardware without requiring text-based commands.
 
-@jules 补全这一部分features简介 简介后面是已经写好的给个别样例介绍
+The user interface is divided into distinct functional zones to streamline the workflow:
+*   **Connection & Control:** A persistent sidebar allows for device management (Connect/Disconnect) and network selection.
+*   **Live Analytics:** Real-time graphs provide immediate feedback on signal stability and strength.
+*   **Mapping Interface:** A dedicated workspace for the "Manual Sweeping" process, featuring a custom interactive dial and a polar radar map.
+*   **Data Management:** Integrated tables allow users to review, delete, and export collected data points.
+
+The following sections detail specific interaction design choices that enhance usability and data accuracy.
 
 #### Interaction Event Loop
 
@@ -331,7 +347,12 @@ The application includes features to ensure data quality:
 ## 3. Results and Reflection
 
 ### 3.1 Results
-@ jules 补全这一部分 include explaination of some key features here
+The final implementation successfully met the core objectives of providing a visual, real-time interface for Wi-Fi diagnostics. The following features represent the key outcomes of the project:
+
+*   **Live Monitor:** This view provides a real-time time-series graph of RSSI values. It allows users to instantly visualize signal stability, identifying potential interference sources (e.g., microwave ovens) or periodic signal drops that would be missed by a simple list view.
+*   **Manual Mapping Mode:** This is the core feature for direction finding. By correlating the physical angle of the device (input via the on-screen dial) with the measured signal strength, the system generates a "Radar Map." This visualization clearly indicates the direction of the strongest signal, allowing for source localization.
+*   **Ping Tool:** To go beyond simple signal strength, a Ping Tool was integrated to measure link quality (latency and packet loss). This helps verify if a strong signal actually corresponds to a usable connection.
+*   **Theme System:** The fully functional Dark/Light mode ensures the tool is usable in various environments, from dimly lit server rooms to bright outdoor field testing.
 
 #### 3.1.1 GUI Preview
 
@@ -393,14 +414,14 @@ But, simple modifications are sufficient to enable fully automated scanning.
 
 #### Future Improvements
 
-@jules 将以下翻译为英文并润色
-
-- 目前主要针对横屏鼠标操作优化，不完美适配手机以及触屏交互逻辑
-- full automated scanning
-- faster scanning (however it due to restrictions of the photon 2 hareware, replacing the module might be necessary)
-- a better designed directional antenna
-- algorithem for the angle calculation
-  - @jules 提供能够显著提升准确度的可行方案
+*   **Mobile & Touch Optimization:** The current interface is optimized for landscape desktop use with mouse interaction. Future updates should improve responsiveness for mobile devices and refine touch-based interactions for the control dial.
+*   **Fully Automated Scanning:** As originally planned, integrating a stepper motor to rotate the device would automate the "sweeping" process, eliminating human error and ensuring consistent angular sampling.
+*   **Faster Scanning Rate:** The current scan rate is limited by the Photon 2's hardware capabilities. Upgrading the Wi-Fi module or migrating to a dedicated RF scanning chipset could significantly increase the data acquisition rate.
+*   **Improved Directional Antenna:** Constructing a more precise directional antenna (e.g., a Yagi-Uda or a properly tuned Horn antenna) would provide a narrower beamwidth, resulting in higher angular resolution and more accurate source localization.
+*   **Refined Source Estimation Algorithm:**
+    *   **Multipath Rejection:** Implement logic to filter out sudden, erratic signal spikes that are likely reflections rather than the direct line-of-sight signal.
+    *   **Kalman Filtering:** Apply a Kalman filter to the sequence of angle estimates to smooth out noise and track the source more reliably over time.
+    *   **Sector Averaging:** Instead of a simple vector sum, analyze "sectors" of high signal strength to identify the center of the beam more robustly.
 
 #### AI Effectiveness
 
