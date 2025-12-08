@@ -89,7 +89,13 @@ The firmware (`project.cpp`) utilizes a non-blocking **Finite State Machine (FSM
 
 #### Software Implementation (GUI)
 
-@jules 补全这一部分 关于webui前端以及后端
+The user interface is built as a single-page application (SPA) using standard web technologies (HTML5, CSS3, JavaScript) without relying on heavy frameworks. This ensures high performance and direct control over the browser's Serial API.
+
+*   **Frontend (HTML/CSS):** The interface utilizes a responsive Flexbox-based layout styled with Tailwind CSS (via CDN) and custom CSS variables for theming. It features a dual-theme system (Light/Dark Mode) that automatically adjusts high-contrast colors for readability in different lighting conditions. The UI is compartmentalized into three functional views: "Live Monitor" for time-series analysis, "Manual Mapping" for spatial analysis, and "Ping Tool" for network diagnostics.
+*   **Backend (Browser-Side Logic):** Since the architecture is serverless, the "backend" logic runs entirely within the client's browser in `script.js`.
+    *   **Serial Stream Pipeline:** The core logic manages the Web Serial API connection. It implements a stream pipeline pattern (`TextDecoderStream` -> `LineBuffer` -> `Parser`) to convert raw incoming bytes into coherent ASCII command lines, ensuring no data packets are fragmented or lost during high-speed transmission.
+    *   **Visualization Engine:** To handle high-frequency data (20Hz) without DOM lag, the "Live RSSI Plot" and "Radar Map" are rendered using the HTML5 Canvas 2D API in immediate mode. This allows for smooth 60 FPS animations of the dial needle and real-time chart updates.
+    *   **State Management:** The application maintains a central state object for the current target (SSID/Channel), collected mapping data points, and UI preferences, ensuring state persistence across tab switches.
 
 ##### Serial Communication Protocol
 
@@ -201,7 +207,12 @@ The final angle is normalized to the $[0, 360)$ range.
 
 To ensure the system is usable in real-world field testing, the WebUI was designed with a focus on **high-contrast data visualization** and **tactile input simulation**. The interface allows for precise control over the hardware without requiring text-based commands.
 
-@jules 补全这一部分features简介 简介后面是已经写好的给个别样例介绍
+The user interface bridges the gap between abstract RF data and human intuition through several key interactive features:
+
+*   **Live Monitor:** A real-time oscilloscope-style graph that visualizes signal stability and interference over time, helping users identify intermittent signal drops.
+*   **Manual Mapping:** A radar-like polar plot that maps signal strength to physical direction. By rotating the device, users can build a visual map of where the signal is strongest.
+*   **Ping Tool:** A built-in diagnostic utility to test network latency and packet loss to external servers directly from the device.
+*   **Responsive Theme System:** A flexible design that supports both light and dark modes, ensuring the tool is comfortable to use in bright outdoor environments or dim lab settings.
 
 #### Interaction Event Loop
 
@@ -331,7 +342,13 @@ The application includes features to ensure data quality:
 ## 3. Results and Reflection
 
 ### 3.1 Results
-@ jules 补全这一部分 include explaination of some key features here
+
+The system successfully implements all core requirements, providing a stable and responsive platform for Wi-Fi signal analysis. The integration of the Photon 2 firmware with the Web Serial frontend proved to be robust, allowing for real-time bi-directional communication with low latency.
+
+*   **Real-time Tracking:** The system allows users to lock onto a specific Access Point and monitor its RSSI with high update rates (~10-20Hz), as shown in the Live Monitor. This high frequency is critical for detecting rapid signal fluctuations caused by movement or interference.
+*   **Directional Visualization:** The "Manual Mapping" feature successfully creates a spatial map of signal strength. By rotating the device, users can clearly identify the direction of the strongest signal, visualized as a "Target" vector on the radar plot. The "Quality Mode" visualization further assists by normalizing these values into an intuitive 0-100% scale.
+*   **Data Persistence & Analysis:** The tool supports exporting collected mapping data to CSV for external analysis. Additionally, the "Test Data" generator allows for algorithm validation without physical hardware.
+*   **Cross-Platform Accessibility:** By utilizing the Web Serial API, the tool runs directly in Chrome or Edge browsers on Windows, macOS, and Linux without requiring any driver installation, achieving the goal of a portable diagnostic solution.
 
 #### 3.1.1 GUI Preview
 
@@ -393,14 +410,14 @@ But, simple modifications are sufficient to enable fully automated scanning.
 
 #### Future Improvements
 
-@jules 将以下翻译为英文并润色
-
-- 目前主要针对横屏鼠标操作优化，不完美适配手机以及触屏交互逻辑
-- full automated scanning
-- faster scanning (however it due to restrictions of the photon 2 hareware, replacing the module might be necessary)
-- a better designed directional antenna
-- algorithem for the angle calculation
-  - @jules 提供能够显著提升准确度的可行方案
+*   **Mobile & Touch Optimization:** The current UI is primarily optimized for landscape desktop usage with mouse input. Future iterations should focus on improving responsiveness for mobile devices and refining touch-based interaction logic to make the tool truly portable on smartphones and tablets.
+*   **Fully Automated Scanning:** Implementing the originally planned stepper motor system to automate the rotation and data collection process. This would remove human error from manual sweeping and allow for consistent, high-resolution 360-degree scans.
+*   **High-Speed Scanning Hardware:** The current scanning speed is limited by the Photon 2's Wi-Fi module switching times. Upgrading to a dedicated RF scanner module or a chipset with faster channel hopping capabilities could significantly increase the data acquisition rate.
+*   **Advanced Directional Antenna:** Replacing the simple parabolic reflector with a high-gain Yagi or Log-Periodic antenna would improve directionality and detection range, making the "Manual Mapping" feature much more precise.
+*   **Enhanced Angle Calculation Algorithm:**
+    *   **Multipath Rejection:** Implementing algorithms to identify and discard reflected signals (multipath) that can skew the direction estimation.
+    *   **Curve Fitting:** Instead of a simple weighted vector sum, applying a Gaussian or parabolic fit to the RSSI-vs-Angle data can pinpoint the signal peak with sub-degree precision, even if the peak falls between sampled angles.
+    *   **Kalman Filtering:** Using a Kalman filter to fuse data from the gyroscope (if available) and RSSI readings to smooth out noise and track the source more accurately during movement.
 
 #### AI Effectiveness
 
