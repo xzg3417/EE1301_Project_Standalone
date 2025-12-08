@@ -1,10 +1,12 @@
 # Photon 2 Wi-Fi Signal Mapper v0.0
 
-**Demo:** https://xzg3417.github.io/EE1301_Project_Standalone/
+**Demo:** https://xzg3417.github.io/EE1301_Project_Standalone/web_interface
 
 ## 0. Memo
 
 **NOTES**
+
+- remove ./test add usage
 
 - Gemini
   - Generate shell commands to separate project directory via Git

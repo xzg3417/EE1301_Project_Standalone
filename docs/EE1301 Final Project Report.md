@@ -678,12 +678,13 @@ String securityToString(int security) {
 
 I started this project by constructing a outline and writing the main program (project.cpp), AI usage for this part includes evaluating feasibility, prompting for function usage/code syntax/bug fix and etc.
 
-Gemini 3 Pro was used via different sites for:
+**Gemini 3 Pro** was used via different sites for:
 
-- Ideas & Understanding - analysis/suggestion, brainstorming, code explanation and etc.
-- Code - optimization, feature implementation, bug fix, comment (explanation), Git usage
-- Documentation Content - README file, Final Project Report file, commit message
-- Documentation Layout - Markdown with html, LaTeX and mermaid,
+- **Ideas & Understanding** - analysis/suggestion, brainstorming, code explanation and etc.
+- **Code** - optimization, feature implementation, bug fix, comment (explanation), Git usage
+- **Documentation Content** - README file, Final Project Report file, commit message
+- **Documentation Layout** - Markdown with html, LaTeX and mermaid,
+- **Naming** - suggestions on naming directories and function names are especially helpful
 
 #### **Prompt 1 ():**
 
