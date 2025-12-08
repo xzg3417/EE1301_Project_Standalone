@@ -4,7 +4,8 @@ let showRaw = false, showLogs = true;
 let port, reader, writer, isConnected = false;
 let radarMode = 'rssi';
 let liveTarget = { ssid: "", channel: 0 };
-let liveChartData = new Array(150).fill(-120);
+const MAX_LIVE_POINTS = 600;
+let liveChartData = new Array(MAX_LIVE_POINTS).fill(-120);
 let packetCount = 0, lastRateCheck = 0;
 let mapTarget = { ssid: "", channel: 0 };
 let mapData = [], measurementID = 1, isMeasuring = false, currentSamples = [], requiredSamples = 2;
@@ -33,6 +34,7 @@ const els = {
     table: document.getElementById('dataTableBody'),
     tooltip: document.getElementById('radarTooltip'),
     predResult: document.getElementById('predictionResult'),
+    zoomSlider: document.getElementById('liveZoomSlider'),
     connect: document.getElementById('connectBtn'),
     scan: document.getElementById('scanBtn'),
     log: document.getElementById('logConsole'),
@@ -159,8 +161,17 @@ window.switchTab = (tab) => {
             view.style.display = 'none'; view.classList.remove('active');
         }
     });
-    if (tab === 'live') { setTimeout(resizeLiveChart, 50); if (liveTarget.ssid && isConnected) sendCommand(`TRACK:${liveTarget.ssid}:${liveTarget.channel}`); }
-    else if (tab === 'map') { setTimeout(() => { drawDial(); resizeRadar(); }, 50); if (mapTarget.ssid && isConnected) sendCommand(`TRACK:${mapTarget.ssid}:${mapTarget.channel}`); else if (isConnected) sendCommand("STOP"); }
+    if (tab === 'live') {
+        setTimeout(resizeLiveChart, 50);
+        // Mode 1 = Fast (Connected RSSI)
+        if (liveTarget.ssid && isConnected) sendCommand(`TRACK:${liveTarget.ssid}:${liveTarget.channel}:1`);
+    }
+    else if (tab === 'map') {
+        setTimeout(() => { drawDial(); resizeRadar(); }, 50);
+        // Mode 0 = Precise (WiFi Scan) - required for manual mapping accuracy
+        if (mapTarget.ssid && isConnected) sendCommand(`TRACK:${mapTarget.ssid}:${mapTarget.channel}:0`);
+        else if (isConnected) sendCommand("STOP");
+    }
 };
 
 window.startPing = () => {
@@ -209,7 +220,12 @@ function processLine(line) {
     if (!line) return;
     if (line.startsWith("DATA:")) {
         const parts = line.substring(5).split(','); const rssi = parseInt(parts[0]);
-        if (currentTab === 'live') { els.disp.rssi.innerText = rssi; liveChartData.push(rssi); liveChartData.shift(); drawLiveChart(); }
+        if (currentTab === 'live') {
+            els.disp.rssi.innerText = rssi;
+            liveChartData.push(rssi);
+            if (liveChartData.length > MAX_LIVE_POINTS) liveChartData.shift();
+            drawLiveChart();
+        }
         else if (currentTab === 'map') handleMapData(rssi);
     } else if (line.startsWith("LIST:")) {
         const p = line.substring(5).split(',');
@@ -243,7 +259,9 @@ function addNetwork(ssid, rssi, ch, bssid, sec) {
         liveTarget = { ssid, channel: ch }; mapTarget = { ssid, channel: ch };
         els.disp.rssi.innerText = "--";
         els.mapTarget.innerText = ssid;
-        if (isConnected) sendCommand(`TRACK:${ssid}:${ch}`);
+        // Determine mode based on current tab
+        const mode = (currentTab === 'live') ? 1 : 0;
+        if (isConnected) sendCommand(`TRACK:${ssid}:${ch}:${mode}`);
         // switchTab('live'); // Removed to prevent forced switching
     });
 }
@@ -383,7 +401,8 @@ function startMeasurement(autoRotate) {
     requiredSamples = parseInt(els.sampleInput.value) || 2;
     els.measureBtn.disabled = true; els.measureBtn.innerText = "SAMPLING...";
     els.statText.innerText = `0 / ${requiredSamples}`; els.progBar.style.width = "0%";
-    sendCommand(`TRACK:${mapTarget.ssid}:${mapTarget.channel}`);
+    // Force Precise Mode (0) for measurement to ensure fresh data
+    sendCommand(`TRACK:${mapTarget.ssid}:${mapTarget.channel}:0`);
 }
 
 function handleMapData(rssi) {
@@ -585,13 +604,22 @@ function drawLiveChart() {
 
     // Plot
     ctx.strokeStyle = C.stroke; ctx.lineWidth = 2; ctx.beginPath();
-    const stepX = drawW / (liveChartData.length - 1);
-    liveChartData.forEach((v, i) => {
+
+    // Zoom Logic
+    const zoomLevel = els.zoomSlider ? parseInt(els.zoomSlider.value) : 150;
+    // Get the last 'zoomLevel' points
+    const drawData = liveChartData.slice(-zoomLevel);
+
+    const stepX = drawW / (drawData.length - 1);
+    drawData.forEach((v, i) => {
         let y = yMargin + drawH - ((v - minVal) / pRange * drawH);
         if (i === 0) ctx.moveTo(xOffset, y); else ctx.lineTo(xOffset + i * stepX, y);
     });
     ctx.stroke();
 }
+
+if (els.zoomSlider) els.zoomSlider.addEventListener('input', drawLiveChart);
+
 window.addEventListener('resize', () => { resizeLiveChart(); if (currentTab === 'map') { drawDial(); resizeRadar(); } });
 switchTab('live');
 

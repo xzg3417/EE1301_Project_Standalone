@@ -105,9 +105,15 @@
                     <div class="flex-1 panel relative flex flex-col min-h-0 group">
                         <div class="absolute top-2 left-2 text-[0.625rem] text-slate-500 z-10 pointer-events-none">LIVE PLOT
                         </div>
-                        <button onclick="openLiveChartImage()" title="Open PNG in New Tab"
-                            class="absolute top-2 right-2 z-20 text-[0.625rem] bg-slate-800 text-sky-400 border border-slate-600 px-2 py-0.5 rounded opacity-50 hover:opacity-100 hover:text-white transition-opacity">EXPORT
-                            PNG</button>
+                        <div class="absolute top-2 right-2 z-20 flex gap-2">
+                            <div class="flex items-center bg-slate-800 border border-slate-600 rounded px-2 gap-2">
+                                <span class="text-[0.625rem] text-slate-400">ZOOM</span>
+                                <input type="range" id="liveZoomSlider" min="50" max="600" value="150" step="10" class="w-24 h-2 bg-slate-700 rounded-lg appearance-none cursor-pointer">
+                            </div>
+                            <button onclick="openLiveChartImage()" title="Open PNG in New Tab"
+                                class="text-[0.625rem] bg-slate-800 text-sky-400 border border-slate-600 px-2 py-0.5 rounded opacity-50 hover:opacity-100 hover:text-white transition-opacity">EXPORT
+                                PNG</button>
+                        </div>
                         <div class="w-full h-full"><canvas id="signalChart"></canvas></div>
                     </div>
                 </div>
