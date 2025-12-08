@@ -100,9 +100,16 @@ To ensure data integrity over the USB serial link, a custom ASCII-based protocol
 The project consists of the following key components:
 
 1.  **Hardware (Sensors & Connectivity):**
+
+    > Optional components are used and tested to function correctly. 
+    >
+    > However, they are not the nessesary parts.
+
     * **Particle Photon 2:** Used as the primary Wi-Fi radio sensor. It leverages the Broadcom Wi-Fi module to perform active scanning and RSSI measurement.
     * **USB Serial Interface:** Provides a reliable, low-latency link between the hardware and the web host, eliminating the need for complex cloud backends for real-time data visualization.
     * **Directional Mapping (Manual):** Directionality is achieved through "Manual Sweeping"—the user rotates the device.
+    * **Optional Directional Shield:** To improve the accuracy of the "Manual Sweeping" process, a simple parabolic reflector (aluminum foil curved behind the antenna) can be used to create physical directionality.
+    * **Optional Physical Button:** A physical button can be used on D3 for better efficiency. It uses `INPUT_PULLDOWN` and detects a `HIGH` signal. When it detects a click it performs a scan using the current parameters. After the scan is complete it passes the data to the WebUI and automatically increase the angle on the dial by 22.5 degrees.
 
 2.  **Software (Interface):**
     * **Web Serial API:** Enables direct communication between the Chrome browser and the microcontroller.
