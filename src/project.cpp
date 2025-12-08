@@ -24,27 +24,34 @@ unsigned long lastStatusReport = 0;
 
 // Button Logic
 const int BUTTON_PIN = D3;
-bool buttonPressed = false;
+volatile bool buttonTriggered = false;
 unsigned long lastButtonPress = 0;
+
+void onButtonPress() {
+    // ISR: Capture event immediately
+    buttonTriggered = true;
+    digitalWrite(D7, HIGH); // Immediate visual feedback
+}
 
 void setup() {
     Serial.begin(115200);
     WiFi.selectAntenna(ANT_EXTERNAL);
     pinMode(BUTTON_PIN, INPUT_PULLDOWN);
+    pinMode(D7, OUTPUT);
+    attachInterrupt(BUTTON_PIN, onButtonPress, RISING);
     delay(2000);
     sendLog("INFO", "System Booted. Radar Engine v10.");
 }
 
 void loop() {
-    // 0. Button Logic
-    if (digitalRead(BUTTON_PIN) == HIGH) {
-        if (!buttonPressed && (millis() - lastButtonPress > 200)) {
-            buttonPressed = true;
+    // 0. Button Logic (Interrupt Based)
+    if (buttonTriggered) {
+        if (millis() - lastButtonPress > 200) {
             Serial.println("EVENT:BUTTON_PRESSED");
             lastButtonPress = millis();
         }
-    } else {
-        buttonPressed = false;
+        buttonTriggered = false;
+        digitalWrite(D7, LOW);
     }
 
     // 1. Process Serial Commands
