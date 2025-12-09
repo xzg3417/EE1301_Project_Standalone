@@ -744,22 +744,98 @@ String securityToString(int security) {
 
 #### ./web_interface/index.html
 
-> The code is not included in this document due to the requirement that “up to 15 pages of appendices including code excerpts, schematics, etc.”
+> The complete code is not included in this document due to the requirement that “up to 15 pages of appendices including code excerpts, schematics, etc.”
 >
 > Please refer to GitHub: https://github.com/xzg3417/EE1301_Project_Standalone 
+
+```html
+<!-- Code Listing: Main HTML Structure with Tailwind CSS CDN -->
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Photon 2 Wi-Fi Signal Mapper : GUI</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<!-- ... -->
+
+<!-- Main Content Container using Flexbox for responsive layout -->
+<div id="main-container" class="flex-1 overflow-hidden relative flex flex-col min-h-0">
+    <div class="flex-1 overflow-hidden relative">
+        <!-- Views are toggled via JS -->
+        <div id="view-live" class="tab-content active w-full h-full">
+            <!-- ... -->
+        </div>
+    </div>
+</div>
+```
 
 #### ./web_interface/script.js
 
-> The code is not included in this document due to the requirement that “up to 15 pages of appendices including code excerpts, schematics, etc.”
+> The complete code is not included in this document due to the requirement that “up to 15 pages of appendices including code excerpts, schematics, etc.”
 >
 > Please refer to GitHub: https://github.com/xzg3417/EE1301_Project_Standalone 
+
+```javascript
+// Code Listing: Serial Data Processing Logic
+async function readLoop() {
+    let buffer = "";
+    try {
+        while (true) {
+            // Read from the serial port using the Web Serial API
+            const { value, done } = await reader.read();
+            if (done) break;
+            buffer += value;
+            const lines = buffer.split('\n');
+            buffer = lines.pop(); // Keep incomplete line in buffer
+            lines.forEach(l => {
+                try { processLine(l.trim()); } catch (e) { console.error(e); }
+            });
+        }
+    } catch (e) { log("ERR", "DISCONNECTED"); isConnected = false; }
+}
+
+// Code Listing: Radar Visualization Rendering (Canvas API)
+function drawRadar() {
+    const ctx = radarCtx, w = els.radar.width, h = els.radar.height;
+    // ... (rendering logic) ...
+    // Draw grid lines
+    for (let i = 0; i < 360; i += 45) {
+        const rad = (i - 90) * Math.PI / 180;
+        ctx.beginPath(); ctx.moveTo(cx, cy);
+        ctx.lineTo(cx + maxR * Math.cos(rad), cy + maxR * Math.sin(rad));
+        ctx.stroke();
+    }
+    // ...
+}
+```
 
 
 #### ./web_interface/style.css
 
-> The code is not included in this document due to the requirement that “up to 15 pages of appendices including code excerpts, schematics, etc.”
+> The complete code is not included in this document due to the requirement that “up to 15 pages of appendices including code excerpts, schematics, etc.”
 >
 > Please refer to GitHub: https://github.com/xzg3417/EE1301_Project_Standalone 
+
+```css
+/* Code Listing: CSS Variables for Dark/Light Mode Theming */
+
+/* Default Dark Mode Styles */
+body { background-color: #0b1121; color: #e2e8f0; font-family: 'Segoe UI', monospace; }
+.panel { background-color: #151e32; border: 1px solid #2d3b55; }
+
+/* Light Mode Overrides */
+body.light-mode { background-color: #f8fafc; color: #334155; }
+body.light-mode .panel {
+    background-color: #ffffff;
+    border-color: #cbd5e1;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+
+/* Optimization for terminal/log text in light mode to ensure contrast */
+body.light-mode #logConsole { color: #334155 !important; }
+```
 
 <div STYLE="page-break-after: always;"></div>
 
