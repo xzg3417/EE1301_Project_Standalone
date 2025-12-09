@@ -17,6 +17,7 @@ State currentState = STATE_IDLE;
 // Tracking Target Information
 String targetSSID = "";
 int targetChannel = 0;
+int trackingMode = 0; // 0=Precise(Scan), 1=Fast(Connected)
 
 WiFiAccessPoint aps[50];
 unsigned long lastUpdate = 0;
@@ -63,12 +64,26 @@ void loop() {
             sendLog("INFO", "Command: FULL SCAN");
             currentState = STATE_SCANNING;
         } else if (cmd.startsWith("TRACK:")) {
+            // TRACK:SSID:CH:MODE
+            // We need to parse manually carefully.
             int firstColon = cmd.indexOf(':');
-            int lastColon = cmd.lastIndexOf(':');
-            if (lastColon > firstColon) {
-                targetSSID = cmd.substring(firstColon + 1, lastColon);
-                targetChannel = cmd.substring(lastColon + 1).toInt();
-                sendLog("INFO", "TARGET LOCKED: [" + targetSSID + "]");
+            int secondColon = cmd.indexOf(':', firstColon + 1);
+            int thirdColon = cmd.indexOf(':', secondColon + 1);
+
+            if (secondColon > firstColon) {
+                targetSSID = cmd.substring(firstColon + 1, secondColon);
+
+                if (thirdColon > secondColon) {
+                    // We have 3 colons: TRACK:SSID:CH:MODE
+                    targetChannel = cmd.substring(secondColon + 1, thirdColon).toInt();
+                    trackingMode = cmd.substring(thirdColon + 1).toInt();
+                } else {
+                    // We have 2 colons: TRACK:SSID:CH
+                    targetChannel = cmd.substring(secondColon + 1).toInt();
+                    trackingMode = 0; // Default to precise
+                }
+
+                sendLog("INFO", "TARGET LOCKED: [" + targetSSID + "] Mode=" + String(trackingMode));
                 currentState = STATE_TRACKING;
             }
         } else if (cmd == "GET_STATUS") {
@@ -208,6 +223,24 @@ void performPing(String target, int count) {
 }
 
 void performStableTracking() {
+    // Optimization: If mode is FAST (1) AND connected to target, use instant RSSI
+    if (trackingMode == 1 && WiFi.ready() && String(WiFi.SSID()) == targetSSID) {
+        int rssi = (int8_t)WiFi.RSSI();
+
+        uint8_t bssid[6];
+        WiFi.BSSID(bssid);
+        String bssidStr = macToString(bssid);
+
+        // DATA:RSSI,CHANNEL,BSSID
+        Serial.print("DATA:");
+        Serial.print(rssi);
+        Serial.print(",");
+        Serial.print(targetChannel);
+        Serial.print(",");
+        Serial.println(bssidStr);
+        return;
+    }
+
     // Core Tracking Logic: Full Channel Scan
     int found = WiFi.scan(aps, 50);
 
