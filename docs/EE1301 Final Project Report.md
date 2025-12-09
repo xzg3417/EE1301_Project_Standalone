@@ -736,22 +736,242 @@ String securityToString(int security) {
 
 #### ./web_interface/index.html
 
-> The code is not included in this document due to the requirement that “up to 15 pages of appendices including code excerpts, schematics, etc.”
+> The complete code is not included in this document due to the requirement that “up to 15 pages of appendices including code excerpts, schematics, etc.”
 >
 > Please refer to GitHub: https://github.com/xzg3417/EE1301_Project_Standalone 
+
+```html
+            <!-- VIEW 2: MANUAL MAPPING -->
+            <div id="view-map" class="tab-content w-full h-full">
+                <div id="panel-left" class="panel min-w-[220px]" style="width: 25%;">
+                    <div class="flex-1 overflow-y-auto custom-scroll p-2 flex flex-col gap-2">
+                        <div
+                            class="p-2 flex flex-col items-center justify-center bg-slate-900/50 rounded border border-slate-800">
+                            <h3 class="text-sky-400 font-bold mb-1 text-[0.625rem] tracking-widest">DIRECTION</h3>
+                            <div class="relative w-full aspect-square max-h-56">
+                                <canvas id="dialCanvas" class="w-full h-full cursor-pointer"></canvas>
+                                <div
+                                    class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-center pointer-events-none">
+                                    <div id="dialValueDisplay" class="text-xl font-bold text-white drop-shadow-md">0°
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="flex items-center gap-2 mt-1">
+                                <input type="number" id="angleInput"
+                                    class="dark-input w-16 text-center font-bold font-mono text-sm" value="0" min="0"
+                                    max="360">
+                                <span class="text-xs text-slate-400">deg (22.5°)</span>
+                            </div>
+                        </div>
+                        <div class="p-2 border border-slate-700 rounded bg-slate-900/20">
+                            <div class="grid grid-cols-1 gap-2 mb-2">
+                                <div>
+                                    <label class="text-[0.625rem] text-slate-400 block">Target</label>
+                                    <div id="mapTargetSSID"
+                                        class="text-xs font-bold text-sky-400 truncate bg-slate-900 px-1 py-0.5 rounded">
+                                        SELECT IN LIVE TAB</div>
+                                </div>
+                                <div class="flex justify-between items-center">
+                                    <label class="text-[0.625rem] text-slate-400">Samples:</label>
+                                    <input type="number" id="sampleCountInput"
+                                        class="dark-input w-12 text-xs text-center" value="2" min="1" max="50">
+                                </div>
+                            </div>
+                            <button id="measureBtn"
+                                class="btn w-full py-2 text-xs font-bold text-white bg-sky-700 hover:bg-sky-600 disabled:opacity-50 mb-1">START
+                                MEASURE</button>
+                            <div class="w-full bg-slate-800 h-1.5 rounded-full overflow-hidden mb-1">
+                                <div id="measureProgress" class="h-full bg-green-500 w-0 transition-all duration-200">
+                                </div>
+                            </div>
+                            <div id="measureStatus" class="text-center text-[0.5625rem] text-slate-500 h-3">Ready</div>
+                        </div>
+
+                        <!-- TOOLS -->
+                        <div class="p-2 border border-yellow-900/30 rounded bg-yellow-900/5 flex flex-col gap-2">
+                            <div class="text-[0.625rem] font-bold text-yellow-500 border-b border-yellow-900/30 pb-1">
+                                ANALYTICS & DATA</div>
+                            <button onclick="calculateSource()"
+                                class="btn w-full py-1 text-[0.625rem] font-bold text-yellow-400 border-yellow-800 hover:bg-yellow-900/40">CALC
+                                SOURCE</button>
+                            <div id="predictionResult"
+                                class="text-center text-[0.625rem] font-mono text-slate-400 min-h-[1rem]">--</div>
+
+                            <div class="grid grid-cols-2 gap-1 mt-1">
+                                <button onclick="generateTestData()"
+                                    class="btn py-1 text-[0.5625rem] text-slate-300 border-slate-600">TEST DATA</button>
+                                <button onclick="clearMapData()"
+                                    class="btn py-1 text-[0.5625rem] text-red-400 border-red-900">CLEAR ALL</button>
+                            </div>
+
+                            <div class="grid grid-cols-2 gap-1 border-t border-slate-700/50 pt-2 mt-1">
+                                <button onclick="exportCSV()"
+                                    class="btn py-1 text-[0.5625rem] text-sky-400 border-sky-900">EXPORT CSV</button>
+                                <label
+                                    class="btn py-1 text-[0.5625rem] text-slate-300 border-slate-600 cursor-pointer text-center block">
+                                    IMPORT CSV
+                                    <input type="file" onchange="importCSV(this)" accept=".csv" class="hidden">
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="resizer-v" id="resizer-1"></div>
+
+                <div id="panel-center" class="panel flex-1 min-w-[200px] relative bg-black overflow-hidden">
+                    <div class="absolute top-2 left-2 flex items-center gap-2 z-10">
+                        <span class="text-[0.625rem] text-slate-500 pointer-events-none">RADAR PLOT</span>
+                        <button id="radarModeBtn"
+                            class="bg-slate-800 text-[0.5625rem] px-2 py-0.5 rounded border border-slate-600 hover:bg-slate-700 text-sky-300">MODE:
+                            RSSI</button>
+                    </div>
+                    <div class="w-full h-full flex items-center justify-center overflow-hidden"><canvas id="radarCanvas"
+                            class="cursor-crosshair"></canvas></div>
+                </div>
+
+                <div class="resizer-v" id="resizer-2"></div>
+
+                <div id="panel-right" class="panel min-w-[200px]" style="width: 25%;">
+                    <div class="p-2 border-b border-slate-800 flex justify-between items-center bg-slate-900 shrink-0">
+                        <span class="text-xs font-bold text-slate-400">DATA LOG</span>
+                        <button onclick="clearMapData()" class="text-[0.5625rem] text-red-400 hover:text-white">[ CLEAR
+                            ]</button>
+                    </div>
+                    <div class="flex-1 overflow-y-auto custom-scroll" id="tableContainer">
+                        <table class="w-full">
+                            <thead>
+                                <tr>
+                                    <th style="width: 25px;"></th>
+                                    <th class="relative" style="width: 40px;">Ang<div class="col-resizer"></div>
+                                    </th>
+                                    <th class="relative" style="width: 40px;">Val<div class="col-resizer"></div>
+                                    </th>
+                                    <th class="relative" style="width: 30px;">#<div class="col-resizer"></div>
+                                    </th>
+                                    <th style="width: 25px;">Del</th>
+                                </tr>
+                            </thead>
+                            <tbody id="dataTableBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+```
 
 #### ./web_interface/script.js
 
-> The code is not included in this document due to the requirement that “up to 15 pages of appendices including code excerpts, schematics, etc.”
+> The complete code is not included in this document due to the requirement that “up to 15 pages of appendices including code excerpts, schematics, etc.”
 >
 > Please refer to GitHub: https://github.com/xzg3417/EE1301_Project_Standalone 
 
+```javascript
+function drawRadar() {
+    const ctx = radarCtx, w = els.radar.width, h = els.radar.height;
+    if (w < 1) return;
+    const cx = w / 2, cy = h / 2, maxR = Math.max(0, Math.min(w, h) / 2 - 20);
+    const C = getTheme();
+    radarPoints = [];
+    ctx.fillStyle = C.bg; ctx.fillRect(0, 0, w, h);
+    ctx.strokeStyle = C.grid; ctx.lineWidth = 1;
+    [0.25, 0.5, 0.75, 1].forEach(s => { ctx.beginPath(); ctx.arc(cx, cy, maxR * s, 0, 2 * Math.PI); ctx.stroke(); });
+    for (let i = 0; i < 360; i += 45) {
+        const rad = (i - 90) * Math.PI / 180;
+        ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(cx + maxR * Math.cos(rad), cy + maxR * Math.sin(rad)); ctx.stroke();
+    }
+    if (predictedAngle !== null) {
+        const pRad = (predictedAngle - 90) * Math.PI / 180;
+        const endX = cx + maxR * Math.cos(pRad), endY = cy + maxR * Math.sin(pRad);
+        ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(endX, endY);
+        ctx.strokeStyle = "#fbbf24"; ctx.lineWidth = 3; ctx.setLineDash([6, 4]); ctx.stroke(); ctx.setLineDash([]);
+        ctx.font = "bold 12px sans-serif"; ctx.fillStyle = "#fbbf24"; ctx.textAlign = "center"; ctx.fillText("TARGET", endX, endY - 10);
+    }
+    if (mapData.length > 0) {
+        let uniqueAngles = {};
+        mapData.forEach(d => { if (!uniqueAngles[d.angle]) uniqueAngles[d.angle] = []; uniqueAngles[d.angle].push(d.rssi); });
+        let sortedAngles = Object.keys(uniqueAngles).map(Number).sort((a, b) => a - b);
+        ctx.beginPath();
+        sortedAngles.forEach((ang, i) => {
+            let avgRssi = uniqueAngles[ang].reduce((a, b) => a + b, 0) / uniqueAngles[ang].length;
+            let r = radarMode === 'rssi' ? (avgRssi + 95) / 70 : getQuality(avgRssi) / 100;
+            if (r < 0) r = 0; if (r > 1) r = 1;
+            let rad = (ang - 90) * Math.PI / 180;
+            let x = cx + r * maxR * Math.cos(rad), y = cy + r * maxR * Math.sin(rad);
+            if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+        });
+        ctx.closePath(); ctx.fillStyle = C.fill; ctx.fill(); ctx.strokeStyle = C.stroke; ctx.lineWidth = 2; ctx.stroke();
+        mapData.forEach(d => {
+            let r = radarMode === 'rssi' ? (d.rssi + 95) / 70 : getQuality(d.rssi) / 100;
+            if (r < 0) r = 0; if (r > 1) r = 1;
+            let rad = (d.angle - 90) * Math.PI / 180;
+            let x = cx + r * maxR * Math.cos(rad), y = cy + r * maxR * Math.sin(rad);
+            radarPoints.push({ x, y, id: d.id, angle: d.angle, rssi: d.rssi, samples: d.rawSamples.length });
+            const isHovered = (d.id === hoveredPointId);
+            ctx.beginPath(); ctx.arc(x, y, isHovered ? 6 : 4, 0, 2 * Math.PI);
+            ctx.fillStyle = d.id === hoveredPointId ? "#ffff00" : (isLightMode ? "#334155" : "#fff"); ctx.fill();
+            if (isHovered) { ctx.strokeStyle = "#fff"; ctx.lineWidth = 2; ctx.stroke(); }
+        });
+    }
+}
+
+window.calculateSource = () => {
+    const validPoints = mapData.filter(d => d.rssi > -100);
+    if (validPoints.length < 3) { els.predResult.innerText = "NEED DATA"; return; }
+
+    // Group by angle to prevent sampling bias
+    const uniqueAngles = {};
+    validPoints.forEach(d => {
+        if (!uniqueAngles[d.angle]) uniqueAngles[d.angle] = [];
+        uniqueAngles[d.angle].push(d.rssi);
+    });
+
+    let sumSin = 0, sumCos = 0;
+    Object.keys(uniqueAngles).forEach(angleStr => {
+        const ang = parseFloat(angleStr);
+        const rssis = uniqueAngles[angleStr];
+        const avgRssi = rssis.reduce((a, b) => a + b, 0) / rssis.length;
+
+        let w = Math.pow(10, (avgRssi + 100) / 20);
+        let r = (ang - 90) * Math.PI / 180;
+        sumSin += Math.sin(r) * w; sumCos += Math.cos(r) * w;
+    });
+
+    let deg = Math.round(Math.atan2(sumSin, sumCos) * 180 / Math.PI + 90);
+    if (deg < 0) deg += 360; predictedAngle = deg;
+    els.predResult.innerHTML = `<span class='text-yellow-400 font-bold'>EST: ${deg}°</span>`; drawRadar();
+};
+```
 
 #### ./web_interface/style.css
 
-> The code is not included in this document due to the requirement that “up to 15 pages of appendices including code excerpts, schematics, etc.”
+> The complete code is not included in this document due to the requirement that “up to 15 pages of appendices including code excerpts, schematics, etc.”
 >
 > Please refer to GitHub: https://github.com/xzg3417/EE1301_Project_Standalone 
+
+```css
+/* --- Light Mode --- */
+body.light-mode { background-color: #f8fafc; color: #334155; }
+body.light-mode .panel { background-color: #ffffff; border-color: #cbd5e1; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+body.light-mode .bg-slate-900 { background-color: #e2e8f0 !important; border-color: #cbd5e1; }
+body.light-mode .bg-black { background-color: #ffffff !important; border: 1px solid #e2e8f0; }
+body.light-mode .text-slate-200 { color: #233254 !important; }
+body.light-mode .text-slate-300 { color: #1e293b !important; }
+body.light-mode .text-slate-400 { color: #475569 !important; }
+body.light-mode .text-slate-500 { color: #475569 !important; }
+body.light-mode .text-white { color: #0f172a !important; }
+body.light-mode .text-sky-300 { color: #0369a1 !important; }
+body.light-mode .btn { background: #f1f5f9; border-color: #cbd5e1; color: #334155; }
+body.light-mode .btn:hover { background: #fff; border-color: #0ea5e9; color: #0ea5e9; }
+body.light-mode .data-box { background-color: #f1f5f9; border-color: #e2e8f0; }
+body.light-mode th { background-color: #f8fafc; border-bottom-color: #cbd5e1; color: #475569; border-right-color: #e2e8f0; }
+body.light-mode td { border-bottom-color: #e2e8f0; border-right-color: #e2e8f0; color: #0f172a; font-weight: 500; }
+body.light-mode .list-item { border-bottom-color: #e2e8f0; }
+body.light-mode .list-item:hover { background-color: #f1f5f9; }
+body.light-mode .list-item.active { background-color: #e0f2fe; border-left-color: #0284c7; }
+body.light-mode .dark-input { background-color: #ffffff; border-color: #94a3b8; color: #0f172a; }
+body.light-mode tr.sub-row td { background-color: #f1f5f9; border-bottom-color: #e2e8f0; }
+body.light-mode #radarTooltip { background-color: #ffffff; border-color: #cbd5e1; color: #0f172a; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+```
 
 <div STYLE="page-break-after: always;"></div>
 
