@@ -29,13 +29,13 @@
 
 ### 1.1 Problem Addressed
 
-This project addresses the limited network diagnostic capabilities of the standalone Particle Photon 2 by providing a streamlined, GUI-based tool that visualizes Wi-Fi signal strength, significantly simplifying connectivity troubleshooting compared to traditional text-based debugging. It can perform basic tests to a internal/external antenna, or impacting factors such as product enclosure.
+This project addresses the limited network diagnostic capabilities of the standalone Particle Photon 2 by providing a streamlined, GUI-based tool that visualizes Wi-Fi signal strength, significantly simplifying connectivity troubleshooting compared to traditional text-based debugging. It can perform basic tests on an internal/external antenna, or impacting factors such as product enclosure.
 
 > This project was designed to utilize a stepper motor for automated scanning. However, due to several reasons, the original design could not be executed. Fortunately, simple modifications are sufficient to enable fully automated scanning. Details will be addressed in the reflection section at the end of this report.
 
 Wi-Fi signals are an invisible yet essential part of modern infrastructure. While standard Wi-Fi scanners can list available networks and their signal strengths, they lack spatial awareness. They provide a simple list, failing to answer the critical questions: "Where is the signal coming from?" and "How is the signal propagating through the space?"
 
-**Photon 2 Wi-Fi Signal Mapper ** addresses this limitation by visualizing the invisible landscape of Wi-Fi signals. It treats signal strength (RSSI) not just as a number, but as a vector quantity (magnitude and direction), enabling a "Radar-style" visualization approach to locate network sources.
+**Photon 2 Wi-Fi Signal Mapper** addresses this limitation by visualizing the invisible landscape of Wi-Fi signals. It treats signal strength (RSSI) not just as a number, but as a vector quantity (magnitude and direction), enabling a "Radar-style" visualization approach to locate network sources.
 
 ### 1.2 Background
 To understand the necessity of this diagnostic tool, it is essential to review the principles of **Received Signal Strength Indicator (RSSI)** and **Link Budget analysis** in embedded systems. RSSI is a measurement of the power present in a received radio signal, typically expressed in decibels-milliwatts (dBm). For IoT devices like the Photon 2, signal integrity is not static; it is heavily influenced by the **RF Link Budget**, which accounts for all gains and losses from the transmitter to the receiver.
@@ -48,9 +48,8 @@ Signal testing and RF validation are established practices in the telecommunicat
 
 - **Professional OTA Testing (Anechoic Chambers):** In high-level industrial applications, verifying an embedded device's antenna performance and enclosure impact is performed via **Over-The-Air (OTA)** testing in an anechoic chamber using Vector Network Analyzers (VNA) from manufacturers like **Rohde & Schwarz** or **Keysight**. While these setups provide precise 3D radiation patterns, they are prohibitively expensive and immobile. This project offers a "pre-compliance" style alternative, allowing developers to perform approximate comparative testing of enclosures on a desktop without renting a lab.
 
-- **Enterprise Site Survey Tools:** Software solutions such as **Ekahau AI Pro** or **NetAlly AirMagnet** are the industry standard for Wi-Fi mapping. These tools use specialized hardware (e.g., the Ekahau Sidekick) to map facility-wide coverage.
-     However, they are designed for IT network administrators to optimize building infrastructure (Access Points), not for firmware engineers to debug the *client device's* reception performance.
-
+- **Enterprise Site Survey Tools:** Software solutions such as **Ekahau AI Pro** or **NetAlly AirMagnet** are the industry standard for Wi-Fi mapping. These tools use specialized hardware (e.g., the Ekahau Sidekick) to map facility-wide coverage. However, they are designed for IT network administrators to optimize building infrastructure (Access Points), not for firmware engineers to debug the *client device's* reception performance.
+  
 - **Vendor-Specific RF Tools:** Chip manufacturers often provide proprietary tools, such as the **Espressif RF Test Tool** or **TI SmartRF Studio**. While effective, these are often restricted to specific chipsets, require heavy driver installation, and lack intuitive visualizations. By contrast, this project utilizes the modern **Web Serial API** to create a driverless, cross-platform diagnostic interface that focuses specifically on the *application-layer* connectivity experience of the Photon 2.
 
 ### 1.4 Solution Overview
@@ -121,7 +120,7 @@ The project consists of the following key components:
 
    > Optional components are used and tested to function correctly. 
    >
-   > However, they are not the nessesary parts.
+   > However, they are not the necessary parts.
 
    * **Particle Photon 2:** Used as the primary Wi-Fi radio sensor. It leverages the Broadcom Wi-Fi module to perform active scanning and RSSI measurement.
    * **USB Serial Interface:** Provides a reliable, low-latency link between the hardware and the web host, eliminating the need for complex cloud backends for real-time data visualization.
@@ -129,7 +128,7 @@ The project consists of the following key components:
    * **Optional Directional Shield:** To improve the accuracy of the "Manual Sweeping" process, a simple parabolic reflector (aluminum foil curved behind the antenna) can be used to create physical directionality.
    * **Optional Physical Button:** A physical button can be used on D3 for better efficiency. It uses `INPUT_PULLDOWN` and detects a `HIGH` signal. When it detects a click it performs a scan using the current parameters. After the scan is complete it passes the data to the WebUI and automatically increase the angle on the dial by 22.5 degrees.
    
-   > Picutres attached in `Appendix A: Electrical Schematic` of this document.
+   > Pictures attached in `Appendix A: Electrical Schematic` of this document.
 
 
 2. **Software (Interface):**
@@ -389,30 +388,35 @@ To empirically validate the system's directional mapping capabilities, I constru
 
 - **Theory:** The aluminum foil acts as a parasitic reflector element, effectively converting the standard dipole’s toroidal (doughnut-shaped) radiation pattern into a directional cardioid pattern. This focuses RF energy in a specific forward direction while attenuating signals from the rear.
 - **Observation:** Using the "Manual Mapping" mode, the system successfully visualized this physical change.
-  - **Forward Gain:** When the reflector was aimed at the router, the RSSI showed a noticeable improvement (approximately +3 to +5 dBm differs by many impacting factors) compared to the bare antenna.
+  - **Forward Gain:** When the reflector was aimed at the router, the RSSI showed a noticeable improvement (approximately +3 to +5 dBm depending on various environmental factors) compared to the bare antenna.
   - **Rear Rejection:** When the reflector was rotated $180^\circ$ away from the source, the signal dropped significantly, confirming a high front-to-back ratio.
 - **Conclusion:** This experiment demonstrated that This project is sensitive enough to detect and visualize the effects of physical antenna modifications, proving its utility as a low-cost RF educational tool.
 
 ### 3.2 Challenges & Solutions
-During development, challenges were encountered includes:
-1.  **Hardware - Sampling Rate:**
-    - `Pull Request #21` represents the final feasible implementation. Although the software logic has been verified to support 20Hz sampling through direct `WiFi.RSSI()` acquisition, system threading, and active UDP traffic injection, extensive testing confirms that the hardware-level RSSI updates remain capped at about 1Hz interval. This persistent latency may be attributed to the Realtek RTL8721DM chipset firmware on the Photon 2, which throttles RSSI refreshes to the standard beacon interval regardless of the high-frequency software polling implemented in this request. After the modification, the RSSI value can be accquired almost realtime. However, by observing the live plot graph, the value only changes after a fix interval, which is approximately 1000ms.
+During development, challenges were encountered included:
 
-1.  **Hardware - Directional Antenna:**
-    - The initial proposal was to built a cantenna out of a can. However, due to the reasons mentioned below in `3.3 Reflection & AI Tool Effectiveness`, I do not have the SMA terminal and feeder line to buid it. This problem is resolved by adding a parabolic reflector to the PCB omnidirectional antenna. Although comparison between the antennas could not be performed, the DIY antenna enables the device to function propoerly.
-2.  **Code - HTML/JS/CSS Syntax:** 
+1. **Hardware - Sampling Rate:**
+   - `Pull Request #21` represents the final feasible implementation. Although the software logic has been verified to support 20Hz sampling through direct `WiFi.RSSI()` acquisition, system threading, and active UDP traffic injection, extensive testing confirms that the hardware-level RSSI updates remain capped at about 1Hz interval. This persistent latency may be attributed to the Realtek RTL8721DM chipset firmware on the Photon 2, which throttles RSSI refreshes to the standard beacon interval regardless of the high-frequency software polling implemented in this request. After the modification, the RSSI value can be accquired almost realtime. However, by observing the live plot graph, the value only changes after a fixed interval, which is approximately 1000ms.
+   - For these reasons, the high-speed polling logic `if (millis() - lastUpdate > 1)` is rendered ineffective, as the `WiFi.scan()` function called within `performStableTracking()` acts as a blocking operation, halting the execution thread for the entire duration of the radio scan.
+
+
+2.  **Hardware - Directional Antenna:**
+    - The initial proposal was to build a cantenna out of a can. However, due to the reasons mentioned below in `3.3 Reflection & AI Tool Effectiveness`, I do not have the SMA terminal and feeder line to buid it. This problem is resolved by adding a parabolic reflector to the PCB omnidirectional antenna. Although comparison between the antennas could not be performed, the DIY antenna enables the device to function properly.
+3.  **Code - HTML/JS/CSS Syntax:** 
     - AI contributes most of the css and html implementation and bug fixes since I am not familiar with it.
     - There was a conflict between the literal colons in the state diagram and the Mermaid syntax. This was resolved by using HTML entities (`#58;`) for the labels.
-3.  **Algorithem -  Vector Math Verification:** Ensuring the coordinate system matched (0 degrees = North vs 0 degrees = East in Math) required careful verification of the `atan2` logic.
-4.  **Algorithem - Source Sampling Bias:** Initially, raw data fluctuated too much. A logic fix was implemented to average `N` samples before recording a data point to act as a low-pass filter.
-    - Previously, taking multiple measurements at a weak signal angle could incorrect skew the result away from a stronger signal measured fewer times. The fix involves averaging RSSI per angle before performing the weighted vector sum. Added a regression test to verify the fix.
+4.  **Algorithm -  Vector Math Verification:** Ensuring the coordinate system matched (0 degrees = North vs 0 degrees = East in Math) required careful verification of the `atan2` logic.
+5.  **Algorithm - Source Sampling Bias:** Initially, raw data fluctuated too much. A logic fix was implemented to average `N` samples before recording a data point to act as a low-pass filter.
+    - Previously, taking multiple measurements at a weak signal angle could incorrectly skew the result away from a stronger signal measured fewer times. The fix involves averaging RSSI per angle before performing the weighted vector sum. Added a regression test to verify the fix.
+6.  **Hardware and Software:**
+    - In the absence of the stepper motor, the user manually rotates the device and adjusts the digital dial on the WebUI to match the physical orientation.
 
 ### 3.3 Reflection & AI Tool Effectiveness
 #### Project Status
 
 All features mentioned in this report functions. The project is partially functional compared to the initial proposal. 
 
-However, the original design which includes the feature of full automated scanning could not be executed since the package containing a stepper motor, driver, adapter and parts shipped oversea was delayed after approximately after  a month of shipping due to custom inspection and I do not have a backup plan.
+However, the original design which includes the feature of full automated scanning could not be executed since the package containing a stepper motor, driver, adapter and parts shipped overseas was delayed after approximately after a month of shipping due to custom inspection and I do not have a backup plan.
 
 But, simple modifications are sufficient to enable fully automated scanning.
 
@@ -790,6 +794,9 @@ I started this project by constructing a outline and writing the main program (p
 > However, all version history since the repository is created are kept. Session links, chat history and other proof can be provided upon request.
 >
 > Here are some examples of AI usage.
+
+> All pro
+
 ##### Code
 
 1. ##### UI Improvements: Resizer Fix, Zoom UI Polish, Manual Mapping Readability #16
@@ -832,7 +839,7 @@ I started this project by constructing a outline and writing the main program (p
 
    >Refer to GitHub pull request `UI Improvements: Resizer Fix, Zoom UI Polish, Manual Mapping Readability #16` .
    >
-   >The result is too long to be attaced in the file.
+   >The result is too lengthy to be attached in the file.
 
 2. ##### Fix sampling bias in source estimation #19
 
@@ -864,7 +871,7 @@ I started this project by constructing a outline and writing the main program (p
 
    > Refer to GitHub pull request `Fix sampling bias in source estimation #19` .
    >
-   > The result is too long to be attaced in the file.
+   > The result is too lengthy to be attached in the file.
 ##### Documentation
 
 1. ##### Commit messsages and description
@@ -872,14 +879,14 @@ I started this project by constructing a outline and writing the main program (p
 
    **Prompt:**
 
-   > Does not require additional user-input.
-   
+   > Does not require additional user input.
+
    **Result:**
-   
+
    ````
    Removed header comments and reformatted code for consistent indentation and style. Added braces to single-line blocks, improved spacing, and clarified logic in command parsing and state machine sections. No functional changes were made.
    ````
-   
+
    ```
    
    * Fix Live Monitor resizer, improve zoom UI, and fix light mode readability in Manual Mapping
@@ -907,7 +914,7 @@ I started this project by constructing a outline and writing the main program (p
    
    Changed displayed version from v21.1 to v0.0 in the Photon 2 Wi-Fi Signal Mapper header.
    ```
-   
+
 1. ##### Markdown formatting, Mermaid graph, LaTeX formatting,
 
    **Description:** Inspected formatting issues for `EE1301 Final Project Report.md`, `README.md`, and the initial proposal.
@@ -926,7 +933,30 @@ I started this project by constructing a outline and writing the main program (p
 
    **Result:**
 
-   > `EE1301 Final Project Report.md`, `README.md` and its components including graphs and equations all have AI contributed parts.
+   > This document is one of the result. There are modifications made.
    >
-   > There are modifications made.
+   > `EE1301 Final Project Report.md`, `README.md` and its components including graphs and equations all have AI contributed parts.
 
+1. ##### **Other usage and workflow - an example for final revision**
+
+   **Description:** This is the final major update for this document. AI was used to correct grammar errors, code inspection, evaluation, suggestion and scoring. Similar workflow was implemented since the initial proposal and throughout this project.
+
+   **Prompt:**
+
+   > The md source code was appended after the prompt.
+
+   ```
+   检查报告语法错误逻辑错误等 指出修改位置 并返回 修改建议 不需要返回整个文档
+   ```
+
+   > The requirement and instruction document was uploaded.
+
+   ```
+   已经修改完成 这次侧重项目逻辑进行审查 并严格按照文档要求进行评分
+   ```
+
+   **Result:**
+
+   > Please refer to Google AI Studio (Permission: Anyone with Link): https://z.umn.edu/axnu
+   >
+   > The result is too lengthy to be attached in the file.
