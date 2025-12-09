@@ -395,6 +395,9 @@ To empirically validate the system's directional mapping capabilities, I constru
 
 ### 3.2 Challenges & Solutions
 During development, challenges were encountered includes:
+1.  **Hardware - Sampling Rate:**
+    - `Pull Request #21` represents the final feasible implementation. Although the software logic has been verified to support 20Hz sampling through direct `WiFi.RSSI()` acquisition, system threading, and active UDP traffic injection, extensive testing confirms that the hardware-level RSSI updates remain capped at about 1Hz interval. This persistent latency may be attributed to the Realtek RTL8721DM chipset firmware on the Photon 2, which throttles RSSI refreshes to the standard beacon interval regardless of the high-frequency software polling implemented in this request. After the modification, the RSSI value can be accquired almost realtime. However, by observing the live plot graph, the value only changes after a fix interval, which is approximately 1000ms.
+
 1.  **Hardware - Directional Antenna:**
     - The initial proposal was to built a cantenna out of a can. However, due to the reasons mentioned below in `3.3 Reflection & AI Tool Effectiveness`, I do not have the SMA terminal and feeder line to buid it. This problem is resolved by adding a parabolic reflector to the PCB omnidirectional antenna. Although comparison between the antennas could not be performed, the DIY antenna enables the device to function propoerly.
 2.  **Code - HTML/JS/CSS Syntax:** 
@@ -402,6 +405,7 @@ During development, challenges were encountered includes:
     - There was a conflict between the literal colons in the state diagram and the Mermaid syntax. This was resolved by using HTML entities (`#58;`) for the labels.
 3.  **Algorithem -  Vector Math Verification:** Ensuring the coordinate system matched (0 degrees = North vs 0 degrees = East in Math) required careful verification of the `atan2` logic.
 4.  **Algorithem - Source Sampling Bias:** Initially, raw data fluctuated too much. A logic fix was implemented to average `N` samples before recording a data point to act as a low-pass filter.
+    - Previously, taking multiple measurements at a weak signal angle could incorrect skew the result away from a stronger signal measured fewer times. The fix involves averaging RSSI per angle before performing the weighted vector sum. Added a regression test to verify the fix.
 
 ### 3.3 Reflection & AI Tool Effectiveness
 #### Project Status
@@ -416,7 +420,7 @@ But, simple modifications are sufficient to enable fully automated scanning.
 
 *   **Mobile & Touch Optimization:** The current interface is optimized for landscape desktop use with mouse interaction. Future updates should improve responsiveness for mobile devices and refine touch-based interactions for the control dial.
 *   **Fully Automated Scanning:** As originally planned, integrating a stepper motor to rotate the device would automate the "sweeping" process, eliminating human error and ensuring consistent angular sampling.
-*   **Faster Scanning Rate:** The current scan rate is limited by the Photon 2's hardware capabilities. Upgrading the Wi-Fi module or migrating to a dedicated RF scanning chipset could significantly increase the data acquisition rate.
+*   **Faster Scanning Rate:** As mentioned in `3.2 Challenges & Solutions`, the current scan rate is limited by the Photon 2's hardware capabilities. Upgrading the Wi-Fi module or migrating to a dedicated RF scanning chipset could significantly increase the data acquisition rate.
 *   **Improved Directional Antenna:** Constructing a more precise directional antenna (e.g., a Yagi-Uda or a properly tuned Horn antenna) would provide a narrower beamwidth, resulting in higher angular resolution and more accurate source localization.
 *   **Refined Source Estimation Algorithm:**
     *   **Multipath Rejection:** Implement logic to filter out sudden, erratic signal spikes that are likely reflections rather than the direct line-of-sight signal.
