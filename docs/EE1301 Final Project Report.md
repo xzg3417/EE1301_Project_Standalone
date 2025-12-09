@@ -743,8 +743,10 @@ String securityToString(int security) {
 ```html
             <!-- VIEW 2: MANUAL MAPPING -->
             <div id="view-map" class="tab-content w-full h-full">
+                <!-- Panel Left: Measurement Controls -->
                 <div id="panel-left" class="panel min-w-[220px]" style="width: 25%;">
                     <div class="flex-1 overflow-y-auto custom-scroll p-2 flex flex-col gap-2">
+                        <!-- Compass Dial UI -->
                         <div
                             class="p-2 flex flex-col items-center justify-center bg-slate-900/50 rounded border border-slate-800">
                             <h3 class="text-sky-400 font-bold mb-1 text-[0.625rem] tracking-widest">DIRECTION</h3>
@@ -756,6 +758,7 @@ String securityToString(int security) {
                                     </div>
                                 </div>
                             </div>
+                            <!-- Manual Angle Input -->
                             <div class="flex items-center gap-2 mt-1">
                                 <input type="number" id="angleInput"
                                     class="dark-input w-16 text-center font-bold font-mono text-sm" value="0" min="0"
@@ -763,6 +766,8 @@ String securityToString(int security) {
                                 <span class="text-xs text-slate-400">deg (22.5°)</span>
                             </div>
                         </div>
+
+                        <!-- Sampling Controls -->
                         <div class="p-2 border border-slate-700 rounded bg-slate-900/20">
                             <div class="grid grid-cols-1 gap-2 mb-2">
                                 <div>
@@ -780,6 +785,7 @@ String securityToString(int security) {
                             <button id="measureBtn"
                                 class="btn w-full py-2 text-xs font-bold text-white bg-sky-700 hover:bg-sky-600 disabled:opacity-50 mb-1">START
                                 MEASURE</button>
+                            <!-- Progress Bar -->
                             <div class="w-full bg-slate-800 h-1.5 rounded-full overflow-hidden mb-1">
                                 <div id="measureProgress" class="h-full bg-green-500 w-0 transition-all duration-200">
                                 </div>
@@ -787,7 +793,7 @@ String securityToString(int security) {
                             <div id="measureStatus" class="text-center text-[0.5625rem] text-slate-500 h-3">Ready</div>
                         </div>
 
-                        <!-- TOOLS -->
+                        <!-- Data Tools -->
                         <div class="p-2 border border-yellow-900/30 rounded bg-yellow-900/5 flex flex-col gap-2">
                             <div class="text-[0.625rem] font-bold text-yellow-500 border-b border-yellow-900/30 pb-1">
                                 ANALYTICS & DATA</div>
@@ -797,6 +803,7 @@ String securityToString(int security) {
                             <div id="predictionResult"
                                 class="text-center text-[0.625rem] font-mono text-slate-400 min-h-[1rem]">--</div>
 
+                            <!-- Import/Export & Simulation -->
                             <div class="grid grid-cols-2 gap-1 mt-1">
                                 <button onclick="generateTestData()"
                                     class="btn py-1 text-[0.5625rem] text-slate-300 border-slate-600">TEST DATA</button>
@@ -819,6 +826,7 @@ String securityToString(int security) {
 
                 <div class="resizer-v" id="resizer-1"></div>
 
+                <!-- Panel Center: Radar Visualization -->
                 <div id="panel-center" class="panel flex-1 min-w-[200px] relative bg-black overflow-hidden">
                     <div class="absolute top-2 left-2 flex items-center gap-2 z-10">
                         <span class="text-[0.625rem] text-slate-500 pointer-events-none">RADAR PLOT</span>
@@ -832,6 +840,7 @@ String securityToString(int security) {
 
                 <div class="resizer-v" id="resizer-2"></div>
 
+                <!-- Panel Right: Data Table -->
                 <div id="panel-right" class="panel min-w-[200px]" style="width: 25%;">
                     <div class="p-2 border-b border-slate-800 flex justify-between items-center bg-slate-900 shrink-0">
                         <span class="text-xs font-bold text-slate-400">DATA LOG</span>
@@ -872,13 +881,19 @@ function drawRadar() {
     const cx = w / 2, cy = h / 2, maxR = Math.max(0, Math.min(w, h) / 2 - 20);
     const C = getTheme();
     radarPoints = [];
+
+    // 1. Draw Background & Grid
     ctx.fillStyle = C.bg; ctx.fillRect(0, 0, w, h);
     ctx.strokeStyle = C.grid; ctx.lineWidth = 1;
+    // Draw concentric circles (25%, 50%, 75%, 100%)
     [0.25, 0.5, 0.75, 1].forEach(s => { ctx.beginPath(); ctx.arc(cx, cy, maxR * s, 0, 2 * Math.PI); ctx.stroke(); });
+    // Draw radial lines every 45 degrees
     for (let i = 0; i < 360; i += 45) {
         const rad = (i - 90) * Math.PI / 180;
         ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(cx + maxR * Math.cos(rad), cy + maxR * Math.sin(rad)); ctx.stroke();
     }
+
+    // 2. Draw Predicted Target Vector
     if (predictedAngle !== null) {
         const pRad = (predictedAngle - 90) * Math.PI / 180;
         const endX = cx + maxR * Math.cos(pRad), endY = cy + maxR * Math.sin(pRad);
@@ -886,26 +901,36 @@ function drawRadar() {
         ctx.strokeStyle = "#fbbf24"; ctx.lineWidth = 3; ctx.setLineDash([6, 4]); ctx.stroke(); ctx.setLineDash([]);
         ctx.font = "bold 12px sans-serif"; ctx.fillStyle = "#fbbf24"; ctx.textAlign = "center"; ctx.fillText("TARGET", endX, endY - 10);
     }
+
+    // 3. Draw Data Polygon
     if (mapData.length > 0) {
+        // Prepare data: Group by angle and average RSSI
         let uniqueAngles = {};
         mapData.forEach(d => { if (!uniqueAngles[d.angle]) uniqueAngles[d.angle] = []; uniqueAngles[d.angle].push(d.rssi); });
         let sortedAngles = Object.keys(uniqueAngles).map(Number).sort((a, b) => a - b);
+
         ctx.beginPath();
         sortedAngles.forEach((ang, i) => {
             let avgRssi = uniqueAngles[ang].reduce((a, b) => a + b, 0) / uniqueAngles[ang].length;
+            // Normalize RSSI (-95 to -25dBm) to radius (0.0 to 1.0)
             let r = radarMode === 'rssi' ? (avgRssi + 95) / 70 : getQuality(avgRssi) / 100;
             if (r < 0) r = 0; if (r > 1) r = 1;
             let rad = (ang - 90) * Math.PI / 180;
             let x = cx + r * maxR * Math.cos(rad), y = cy + r * maxR * Math.sin(rad);
             if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
         });
+        // Fill and Stroke the polygon
         ctx.closePath(); ctx.fillStyle = C.fill; ctx.fill(); ctx.strokeStyle = C.stroke; ctx.lineWidth = 2; ctx.stroke();
+
+        // 4. Draw Individual Data Points
         mapData.forEach(d => {
             let r = radarMode === 'rssi' ? (d.rssi + 95) / 70 : getQuality(d.rssi) / 100;
             if (r < 0) r = 0; if (r > 1) r = 1;
             let rad = (d.angle - 90) * Math.PI / 180;
             let x = cx + r * maxR * Math.cos(rad), y = cy + r * maxR * Math.sin(rad);
             radarPoints.push({ x, y, id: d.id, angle: d.angle, rssi: d.rssi, samples: d.rawSamples.length });
+
+            // Hover effect logic
             const isHovered = (d.id === hoveredPointId);
             ctx.beginPath(); ctx.arc(x, y, isHovered ? 6 : 4, 0, 2 * Math.PI);
             ctx.fillStyle = d.id === hoveredPointId ? "#ffff00" : (isLightMode ? "#334155" : "#fff"); ctx.fill();
@@ -915,10 +940,11 @@ function drawRadar() {
 }
 
 window.calculateSource = () => {
+    // 1. Filter weak signals (noise floor)
     const validPoints = mapData.filter(d => d.rssi > -100);
     if (validPoints.length < 3) { els.predResult.innerText = "NEED DATA"; return; }
 
-    // Group by angle to prevent sampling bias
+    // 2. Group by angle to prevent sampling bias (many samples at one angle skewing the sum)
     const uniqueAngles = {};
     validPoints.forEach(d => {
         if (!uniqueAngles[d.angle]) uniqueAngles[d.angle] = [];
@@ -926,16 +952,20 @@ window.calculateSource = () => {
     });
 
     let sumSin = 0, sumCos = 0;
+    // 3. Weighted Vector Sum Algorithm
     Object.keys(uniqueAngles).forEach(angleStr => {
         const ang = parseFloat(angleStr);
         const rssis = uniqueAngles[angleStr];
         const avgRssi = rssis.reduce((a, b) => a + b, 0) / rssis.length;
 
+        // Convert Logarithmic RSSI to Linear Weight
         let w = Math.pow(10, (avgRssi + 100) / 20);
+        // Convert Polar to Cartesian
         let r = (ang - 90) * Math.PI / 180;
         sumSin += Math.sin(r) * w; sumCos += Math.cos(r) * w;
     });
 
+    // 4. Calculate Resultant Vector Angle
     let deg = Math.round(Math.atan2(sumSin, sumCos) * 180 / Math.PI + 90);
     if (deg < 0) deg += 360; predictedAngle = deg;
     els.predResult.innerHTML = `<span class='text-yellow-400 font-bold'>EST: ${deg}°</span>`; drawRadar();
@@ -950,25 +980,36 @@ window.calculateSource = () => {
 
 ```css
 /* --- Light Mode --- */
+/* Override global background and text color */
 body.light-mode { background-color: #f8fafc; color: #334155; }
+
+/* Light Mode Panels: White background with slate borders */
 body.light-mode .panel { background-color: #ffffff; border-color: #cbd5e1; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+
+/* Utility Overrides using !important to override Tailwind classes */
 body.light-mode .bg-slate-900 { background-color: #e2e8f0 !important; border-color: #cbd5e1; }
 body.light-mode .bg-black { background-color: #ffffff !important; border: 1px solid #e2e8f0; }
+
+/* Text Color High-Contrast Overrides */
 body.light-mode .text-slate-200 { color: #233254 !important; }
 body.light-mode .text-slate-300 { color: #1e293b !important; }
 body.light-mode .text-slate-400 { color: #475569 !important; }
 body.light-mode .text-slate-500 { color: #475569 !important; }
 body.light-mode .text-white { color: #0f172a !important; }
 body.light-mode .text-sky-300 { color: #0369a1 !important; }
+
+/* Interactive Elements (Buttons & Inputs) */
 body.light-mode .btn { background: #f1f5f9; border-color: #cbd5e1; color: #334155; }
 body.light-mode .btn:hover { background: #fff; border-color: #0ea5e9; color: #0ea5e9; }
 body.light-mode .data-box { background-color: #f1f5f9; border-color: #e2e8f0; }
+body.light-mode .dark-input { background-color: #ffffff; border-color: #94a3b8; color: #0f172a; }
+
+/* Table Styles */
 body.light-mode th { background-color: #f8fafc; border-bottom-color: #cbd5e1; color: #475569; border-right-color: #e2e8f0; }
 body.light-mode td { border-bottom-color: #e2e8f0; border-right-color: #e2e8f0; color: #0f172a; font-weight: 500; }
 body.light-mode .list-item { border-bottom-color: #e2e8f0; }
 body.light-mode .list-item:hover { background-color: #f1f5f9; }
 body.light-mode .list-item.active { background-color: #e0f2fe; border-left-color: #0284c7; }
-body.light-mode .dark-input { background-color: #ffffff; border-color: #94a3b8; color: #0f172a; }
 body.light-mode tr.sub-row td { background-color: #f1f5f9; border-bottom-color: #e2e8f0; }
 body.light-mode #radarTooltip { background-color: #ffffff; border-color: #cbd5e1; color: #0f172a; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
 ```
