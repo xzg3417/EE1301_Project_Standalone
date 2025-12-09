@@ -871,7 +871,7 @@ I started this project by constructing a outline and writing the main program (p
 >
 > Here are some examples of AI usage.
 
-> All pro
+> There are failures when using AI for some cases (first trials), however, after iterations the output all work as intended.
 
 ##### Code
 
